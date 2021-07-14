@@ -5,6 +5,11 @@
 #define DIR_LEFT	2
 #define DIR_RIGHT	3
 
+#define DIR_FORWARD	0
+#define DIR_BACKWARD	1
+#define DIR_LEFT	2
+#define DIR_RIGHT	3
+
 struct Camera
 {
 	vec3 position;

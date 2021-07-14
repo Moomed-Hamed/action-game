@@ -1,4 +1,4 @@
-#include "camera.h"
+#include "player.h"
 
 #define TARGET_FRAMES_PER_SECOND ((float)120)
 #define DRAW_DISTANCE 512.0f
@@ -13,7 +13,13 @@ int main()
 	init_window(&window, 1920, 1080, "action game");
 	init_keyboard(&keys);
 
-	Camera camera = {};
+	Camera camera = { vec3(0,1,0) };
+
+	Asset_Renderer* axe_renderer = Alloc(Asset_Renderer, 1);
+	init(axe_renderer);
+
+	Terrain_Renderer* terrain_renderer = Alloc(Terrain_Renderer, 1);
+	init(terrain_renderer);
 
 	G_Buffer g_buffer = {};
 	init_g_buffer(&g_buffer, window);
@@ -33,13 +39,29 @@ int main()
 
 		if (keys.ESC.is_pressed) break;
 
+		if (keys.W.is_pressed) camera_update_pos(&camera, DIR_FORWARD , 5 * frame_time);
+		if (keys.S.is_pressed) camera_update_pos(&camera, DIR_BACKWARD, 5 * frame_time);
+		if (keys.A.is_pressed) camera_update_pos(&camera, DIR_LEFT    , 5 * frame_time);
+		if (keys.D.is_pressed) camera_update_pos(&camera, DIR_RIGHT   , 5 * frame_time);
+		camera.position.y = 1.8;
+		camera_update_dir(&camera, mouse.dx, mouse.dy);
+
 		mat4 proj_view = proj * glm::lookAt(camera.position, camera.position + camera.front, camera.up);
+
+		// renderer updates
+		update_renderer(axe_renderer, camera.position, camera.up, camera.front);
+		update_renderer(terrain_renderer);
 
 		// Geometry pass
 		glBindFramebuffer(GL_FRAMEBUFFER, g_buffer.FBO);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		// draw meshes
+		bind(axe_renderer->shader);
+		set_mat4(axe_renderer->shader, "proj_view", proj_view);
+		bind_texture(axe_renderer->mesh, 4);
+		draw(axe_renderer->mesh, 1);
+
+		draw(terrain_renderer, proj_view);
 
 		// Lighting pass
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
