@@ -1,4 +1,4 @@
-#include "camera.h"
+#include "particles.h"
 
 struct Terrain_Drawable
 {
@@ -41,3 +41,11 @@ void draw(Terrain_Renderer* renderer, mat4 proj_view)
 	bind_texture(renderer->mesh, 3);
 	draw(renderer->mesh, 1);
 }
+
+// floors
+
+struct Level_Floor
+{
+	Plane_Collider_Static collider;
+};
+
