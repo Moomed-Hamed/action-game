@@ -1,4 +1,4 @@
-#include "terrain.h"
+#include "props.h"
 
 #define MAX_BULLETS 16
 
@@ -7,21 +7,22 @@ struct Bullet
 	vec3 position;
 	vec3 velocity;
 	vec3 up;
-	float damage;
+	float time_alive;
+	//float damage;
 };
 
-void update_bullets(Bullet* bullets, Physics_Colliders* colliders, float dtime)
+void update_bullets(Bullet* bullets, float dtime)
 {
 	for (uint i = 0; i < MAX_BULLETS; i++)
 	{
-		if (point_in_sphere(bullets[i].position, colliders->spheres[0]))
+		if (bullets[i].time_alive > 5)
 		{
-			colliders->spheres[0].velocity += bullets[0].velocity;
 			bullets[i] = {};
 		}
 		else
 		{
 			bullets[i].position += bullets[i].velocity * dtime;
+			bullets[i].time_alive += dtime;
 		}
 	}
 }

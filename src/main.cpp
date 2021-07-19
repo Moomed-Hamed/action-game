@@ -1,4 +1,4 @@
-#include "player.h"
+#include "level.h"
 
 #define TARGET_FRAMES_PER_SECOND ((float)120)
 #define DRAW_DISTANCE 512.0f
@@ -9,10 +9,14 @@ int main()
 	Mouse    mouse  = {};
 	Keyboard keys   = {};
 
-	init_window(&window, 1920, 1080, "action game");
+	init_window(&window, 1280, 720, "action game");
 	init_keyboard(&keys);
 
-	Camera camera = {};
+	Level* level = Alloc(Level, 1);
+	init(level);
+
+	Enemy_Renderer* enemy_renderer = Alloc(Enemy_Renderer, 1);
+	init(enemy_renderer);
 
 	GUI_Renderer* gui = Alloc(GUI_Renderer, 1);
 	init(gui);
@@ -23,11 +27,11 @@ int main()
 	gui->quads[0].color    = vec3(1, 0, 0);
 
 	Physics_Colliders* colliders = Alloc(Physics_Colliders, 1);
-	colliders->cubes[0]      = { vec3(1, 5, 3), vec3(0, 0, 0), vec3(1, 1, 1) };
-	colliders->spheres[0]    = { vec3(3, 5, 3), vec3(0, 0, 0), .5            };
-	colliders->cylinders[0]  = { vec3(5, 5, 3), vec3(0, 0, 0), .5, 1         };
-	colliders->planes[0]     = { vec3(5,0.5,6), vec2(1, 1), vec3(0, 0,-1) };
-	colliders->planes[1]     = { vec3(0, 0, 0), vec2(100, 1), vec3(0, 1, 0) };
+	init_colldier(colliders->dynamic.cubes    , vec3(1, .5, 3), vec3(0, 0, 0), vec3(0, 0, 0), 1, vec3(1, 1, 1));
+	init_collider(colliders->dynamic.cylinders, vec3(5, .5, 3), vec3(0, 0, 0), vec3(0, 0, 0), 1, 1, .5);
+	init_collider(colliders->dynamic.spheres  , vec3(3, .5, 3), vec3(0, 0, 0), vec3(0, 0, 0), 1, .5);
+	init_collider(colliders->fixed.planes, vec3(5, 0.5, 6), vec3(0, 0, 0), vec3(0, 0, 0), vec3(0, 0, -1), vec2(100, 100));
+	init_collider(colliders->fixed.planes + 1, vec3(0, 1, 0), vec3(0, 0, 0), vec3(0, 0, 0), vec3(0, 1, 0), vec2(100, 100));
 
 	Physics_Renderer* physics_renderer = Alloc(Physics_Renderer, 1);
 	init(physics_renderer);
@@ -35,12 +39,11 @@ int main()
 	Player_Arms_Renderer* player_arms_renderer = Alloc(Player_Arms_Renderer, 1);
 	init(player_arms_renderer);
 
-	Bullet* bullets = Alloc(Bullet, MAX_BULLETS);
 	Bullet_Renderer* bullet_renderer = Alloc(Bullet_Renderer, 1);
 	init(bullet_renderer);
 
-	Terrain_Renderer* terrain_renderer = Alloc(Terrain_Renderer, 1);
-	init(terrain_renderer);
+	Tile_Renderer* tile_renderer = Alloc(Tile_Renderer, 1);
+	init(tile_renderer);
 
 	G_Buffer g_buffer = {};
 	init_g_buffer(&g_buffer, window);
@@ -60,35 +63,31 @@ int main()
 
 		if (keys.ESC.is_pressed) break;
 
-		if (keys.W.is_pressed) camera_update_pos(&camera, DIR_FORWARD , 5 * frame_time);
-		if (keys.S.is_pressed) camera_update_pos(&camera, DIR_BACKWARD, 5 * frame_time);
-		if (keys.A.is_pressed) camera_update_pos(&camera, DIR_LEFT    , 5 * frame_time);
-		if (keys.D.is_pressed) camera_update_pos(&camera, DIR_RIGHT   , 5 * frame_time);
-		camera.position.y = 1.8;
-		camera_update_dir(&camera, mouse.dx, mouse.dy);
+		update(&level->player, keys, mouse, frame_time);
 
 		if (mouse.left_button.is_pressed && !mouse.left_button.was_pressed)
 		{
-			bullets[0].position = camera.position + (camera.front * .36f);
-			bullets[0].velocity = camera.front * 10.f;
-			bullets[0].up = camera.up;
+			level->bullets[0].position = level->player.eyes.position + (level->player.eyes.front * .36f);
+			level->bullets[0].velocity = level->player.eyes.front * 10.f;
+			level->bullets[0].up = level->player.eyes.up;
 		}
 
-		mat4 proj_view = proj * glm::lookAt(camera.position, camera.position + camera.front, camera.up);
+		mat4 proj_view = proj * glm::lookAt(level->player.eyes.position, level->player.eyes.position + level->player.eyes.front, level->player.eyes.up);
 
 		//physics updates
-		if (keys.R.is_pressed) colliders->spheres[0].velocity += camera.front;
-		if (keys.F.is_pressed) colliders->spheres[0].velocity -= camera.front;
-		update_colliders(colliders, frame_time);
+		if (keys.R.is_pressed) colliders->dynamic.spheres[0].velocity += level->player.eyes.front;
+		if (keys.F.is_pressed) colliders->dynamic.spheres[0].velocity -= level->player.eyes.front;
+		//update_colliders(colliders, frame_time);
 
 		// game updates
-		update_bullets(bullets, colliders, frame_time);
+		update_level(level, frame_time);
 
 		// renderer updates
 		update_renderer(physics_renderer, colliders);
-		update_renderer(player_arms_renderer, camera, frame_time, mouse.norm_x);
-		update_renderer(terrain_renderer);
-		update_renderer(bullet_renderer, bullets);
+		update_renderer(player_arms_renderer, level->player.eyes, frame_time, mouse.left_button.is_pressed, mouse.norm_x);
+		update_renderer(tile_renderer);
+		update_renderer(bullet_renderer, (Bullet*)&(level->bullets));
+		update_renderer(enemy_renderer, level->enemy, frame_time);
 
 		// Geometry pass
 		glBindFramebuffer(GL_FRAMEBUFFER, g_buffer.FBO);
@@ -99,16 +98,17 @@ int main()
 		draw(gui);
 
 		draw(player_arms_renderer, proj_view);
-		draw(terrain_renderer, proj_view);
-		draw(physics_renderer, proj_view);
-		draw(bullet_renderer , proj_view);
+		draw(tile_renderer       , proj_view);
+		draw(physics_renderer    , proj_view);
+		draw(bullet_renderer     , proj_view);
+		draw(enemy_renderer      , proj_view);
 
 		// Lighting pass
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		bind(lighting_shader);
-		set_vec3(lighting_shader, "view_pos", camera.position);
+		set_vec3(lighting_shader, "view_pos", level->player.eyes.position);
 		draw_g_buffer(g_buffer);
 
 		//Frame Time

@@ -1,7 +1,8 @@
 // Copyright (c) 2021 Mohamed Hamed
-// Intermediary version 18.7.21
+// Intermediary version 28.7.21
 
 #pragma comment(lib, "winmm")
+#pragma comment (lib, "Ws2_32.lib") // networking
 #pragma comment(lib, "opengl32")
 #pragma comment(lib, "external/GLEW/glew32s")
 #pragma comment(lib, "external/GLFW/glfw3")
@@ -19,6 +20,8 @@
 #include "external/OpenAL/al.h" // for audio
 #include "external/OpenAL/alc.h"
 
+#include <winsock2.h> // for some reason rearranging these
+#include <ws2tcpip.h> // includes breaks everything
 #include <Windows.h>
 #include <fileapi.h>
 #include <iostream>
@@ -127,4 +130,92 @@ Audio load_audio(const char* path)
 void play_audio(Audio source_id)
 {
 	alSourcePlay(source_id);
+}
+
+// math
+
+// linear interpolation
+vec3 lerp(vec3 start, vec3 end, float amount)
+{
+	return (start + amount * (end - start));
+}
+quat lerp(quat start, quat end, float amount)
+{
+	return (start + amount * (end - start));
+}
+mat4 lerp(mat4 frame_1, mat4 frame_2, float amount)
+{
+	vec3 pos_1 = vec3(frame_1[0][3], frame_1[1][3], frame_1[2][3]);
+	vec3 pos_2 = vec3(frame_2[0][3], frame_2[1][3], frame_2[2][3]);
+
+	quat rot_1 = quat(frame_1);
+	quat rot_2 = quat(frame_2);
+
+	vec3 pos = lerp(pos_1, pos_2, amount);
+	quat rot = lerp(rot_1, rot_2, amount);
+
+	mat4 ret = mat4(rot);
+	ret[0][3] = pos.x;
+	ret[1][3] = pos.y;
+	ret[2][3] = pos.z;
+
+	return ret;
+}
+mat4 lerp_sin(mat4 frame_1, mat4 frame_2, float amount)
+{
+	vec3 pos_1 = vec3(frame_1[0][3], frame_1[1][3], frame_1[2][3]);
+	vec3 pos_2 = vec3(frame_2[0][3], frame_2[1][3], frame_2[2][3]);
+
+	quat rot_1 = quat(frame_1);
+	quat rot_2 = quat(frame_2);
+
+	vec3 pos = lerp(pos_1, pos_2, sin(amount * (PI / 2.f)));
+	quat rot = lerp(rot_1, rot_2, sin(amount * (PI / 2.f)));
+
+	mat4 ret = mat4(rot);
+	ret[0][3] = pos.x;
+	ret[1][3] = pos.y;
+	ret[2][3] = pos.z;
+
+	return ret;
+}
+mat4 lerp_spring(mat4 frame_1, mat4 frame_2, float amount)
+{
+	vec3 pos_1 = vec3(frame_1[0][3], frame_1[1][3], frame_1[2][3]);
+	vec3 pos_2 = vec3(frame_2[0][3], frame_2[1][3], frame_2[2][3]);
+
+	quat rot_1 = quat(frame_1);
+	quat rot_2 = quat(frame_2);
+
+	float period    = sin(amount * 8.f * PI);
+	float stiffness = exp(amount * -5);
+	float spring = period * stiffness;
+
+	vec3 pos = lerp(pos_1, pos_2, spring);
+	quat rot = lerp(rot_1, rot_2, spring);
+
+	mat4 ret = mat4(rot);
+	ret[0][3] = pos.x;
+	ret[1][3] = pos.y;
+	ret[2][3] = pos.z;
+
+	return ret;
+}
+mat4 nlerp(mat4 frame_1, mat4 frame_2, float amount)
+{
+	vec3 pos_1 = vec3(frame_1[0][3], frame_1[1][3], frame_1[2][3]);
+	vec3 pos_2 = vec3(frame_2[0][3], frame_2[1][3], frame_2[2][3]);
+
+	quat rot_1 = quat(frame_1);
+	quat rot_2 = quat(frame_2);
+
+	vec3 pos = lerp(pos_1, pos_2, amount);
+	quat rot = glm::normalize(lerp(rot_1, rot_2, amount));
+
+	mat4 ret = mat4(rot);
+	ret[0][3] = pos.x;
+	ret[1][3] = pos.y;
+	ret[2][3] = pos.z;
+
+	return ret;
 }
