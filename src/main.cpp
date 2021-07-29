@@ -1,4 +1,4 @@
-#include "level.h"
+#include "networking.h"
 
 #define TARGET_FRAMES_PER_SECOND ((float)120)
 #define DRAW_DISTANCE 512.0f
@@ -9,7 +9,7 @@ int main()
 	Mouse    mouse  = {};
 	Keyboard keys   = {};
 
-	init_window(&window, 1280, 720, "action game");
+	init_window(&window, 1920, 1080, "action game");
 	init_keyboard(&keys);
 
 	Level* level = Alloc(Level, 1);
@@ -30,8 +30,8 @@ int main()
 	init_colldier(colliders->dynamic.cubes    , vec3(1, .5, 3), vec3(0, 0, 0), vec3(0, 0, 0), 1, vec3(1, 1, 1));
 	init_collider(colliders->dynamic.cylinders, vec3(5, .5, 3), vec3(0, 0, 0), vec3(0, 0, 0), 1, 1, .5);
 	init_collider(colliders->dynamic.spheres  , vec3(3, .5, 3), vec3(0, 0, 0), vec3(0, 0, 0), 1, .5);
-	init_collider(colliders->fixed.planes, vec3(5, 0.5, 6), vec3(0, 0, 0), vec3(0, 0, 0), vec3(0, 0, -1), vec2(100, 100));
-	init_collider(colliders->fixed.planes + 1, vec3(0, 1, 0), vec3(0, 0, 0), vec3(0, 0, 0), vec3(0, 1, 0), vec2(100, 100));
+	//init_collider(colliders->fixed.planes, vec3(5, 6, 6), vec3(0, 0, 0), vec3(0, 0, 0), vec3(0, 0, -1), vec2(10, 10));
+	//init_collider(colliders->fixed.planes + 1, vec3(0, 0, 0), vec3(0, 0, 0), vec3(0, 0, 0), vec3(0, 1, 0), vec2(100, 100));
 
 	Physics_Renderer* physics_renderer = Alloc(Physics_Renderer, 1);
 	init(physics_renderer);
@@ -55,6 +55,10 @@ int main()
 	int64 target_frame_milliseconds = frame_time * 1000.f;
 	Timestamp frame_start = get_timestamp(), frame_end;
 
+	// networking
+	create_thread(server_proc, &level->enemy); srand(__rdtsc());
+	//create_thread(client_proc, &level->player);
+
 	while (1)
 	{
 		update_window(window);
@@ -63,7 +67,7 @@ int main()
 
 		if (keys.ESC.is_pressed) break;
 
-		update(&level->player, keys, mouse, frame_time);
+		update(&level->player, keys, mouse, frame_time, frame_time);
 
 		if (mouse.left_button.is_pressed && !mouse.left_button.was_pressed)
 		{

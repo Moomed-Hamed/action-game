@@ -1,4 +1,4 @@
-#include "networking.h"
+#include "intermediary.h"
 
 #define WINDOW_ERROR(str) out("WINDOW ERROR: " << str)
 

@@ -1,4 +1,4 @@
-#include "intermediary.h"
+#include "level.h"
 
 #define NETWORK_ERROR(err) out("NETWORK ERROR: " << err)
 
@@ -21,7 +21,7 @@ struct Server
 	SOCKET listen_socket;
 };
 
-int server_init(Server* server, const char* ip, const char* port, int max_clients = 1)
+int init(Server* server, const char* ip, const char* port, int max_clients = 1)
 {
 	WSADATA wsa_data;
 	addrinfo* result = NULL;
@@ -35,10 +35,10 @@ int server_init(Server* server, const char* ip, const char* port, int max_client
 	}
 
 	addrinfo hints = {};
-	hints.ai_family = AF_INET;
+	hints.ai_family   = AF_INET;
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_protocol = IPPROTO_TCP;
-	hints.ai_flags = AI_PASSIVE;
+	hints.ai_flags    = AI_PASSIVE;
 
 	// Resoooolve server address and port
 	if ((err = getaddrinfo(NULL, port, &hints, &result)) != 0)
@@ -57,6 +57,9 @@ int server_init(Server* server, const char* ip, const char* port, int max_client
 		WSACleanup();
 		return -1;
 	}
+
+	char boolean = 1; // the beauty of windows programming
+	setsockopt(listen_socket, SOL_SOCKET, SO_REUSEADDR, &boolean, sizeof(char));
 
 	// set up TCP listening socket
 	err = bind(listen_socket, result->ai_addr, (int)result->ai_addrlen);
@@ -82,7 +85,7 @@ int server_init(Server* server, const char* ip, const char* port, int max_client
 
 	// FIONBIO sets blocking mode for a socket, mode = 0 for blocking, mode != 0 for non-blocking
 	u_long blocking_mode = 1; // non-blocking
-	Sleep(1);
+	Sleep(10);
 	err = ioctlsocket(listen_socket, FIONBIO, &blocking_mode);
 
 	*server = {};
@@ -124,20 +127,16 @@ int server_update_connections(Server* server)
 
 	return server->num_active_clients;
 }
-
-//receive msg from server.clients[id]
 int server_recieve(Server server, byte* memory, uint max_size = 256, uint id = 0)
 {
+	//receive msg from server.clients[id]
 	return recv(server.clients[id].socket, (char*)memory, max_size, 0);
 }
-
-//send msg to server.clients[id]
 int server_send(Server server, byte* msg, uint msg_size, uint client_id = 0)
 {
+	//send msg to server.clients[id]
 	return send(server.clients[client_id].socket, (char*)msg, msg_size, 0);
 }
-
-//send msg to all clients
 int server_send_to_all(Server server, byte* msg, uint msg_size)
 {
 	//TODO : IMPLEMENT
@@ -150,7 +149,7 @@ struct Client
 };
 
 // connects to a server at ip
-int client_init(Client* client, const char* ip, const char* port)
+int init(Client* client, const char* ip, const char* port)
 {
 	int err = 0;
 	addrinfo* result = NULL;
@@ -221,13 +220,13 @@ int client_send(Client client, byte* msg, uint size)
 int client_demo(const char* ip, const char* port)
 {
 	Client client = {};
-	client_init(&client, ip, port);
+	init(&client, ip, port);
 
 	while (1)
 	{
 		char message[256] = { "howdy there partner" };
 
-		std::cout << client_send(client, (byte*)message, sizeof(message));
+		out(client_send(client, (byte*)message, sizeof(message)));
 		Sleep(100);
 	}
 
@@ -236,7 +235,7 @@ int client_demo(const char* ip, const char* port)
 int server_demo(const char* ip, const char* port)
 {
 	Server server = {};
-	server_init(&server, ip, port, 4);
+	init(&server, ip, port, 4);
 
 	while (!server_update_connections(&server)) Sleep(100);
 
@@ -261,4 +260,68 @@ int server_demo(const char* ip, const char* port)
 	}
 
 	return 0;
+}
+
+DWORD WINAPI client_proc(LPVOID params)
+{
+	Player* player = (Player*)params;
+
+	const char* ip = "192.168.1.2";
+	const char* port = "42069";
+
+	Client client = {};
+	init(&client, ip, port);
+
+	print("Client : connected to %s\n", ip);
+
+	while (1)
+	{
+		//char message[256] = { "howdy there partner" };
+
+		out(client_send(client, (byte*)&player->feet.position, sizeof(vec3)));
+		Sleep(100);
+	}
+
+	return 0;
+}
+DWORD WINAPI server_proc(LPVOID params)
+{
+	Enemy* enemy = (Enemy*)params;
+
+	const char* ip = "192.168.1.2";
+	const char* port = "42069";
+
+	Server server = {};
+	init(&server, ip, port);
+
+	print("Server : listening for connections on [%s]:[%s]\n", ip, port);
+
+	while (!server_update_connections(&server)) Sleep(2000);
+
+	print("Server : client connected\n");
+
+	while (1)
+	{
+		server_update_connections(&server);
+
+		//out("num active clients: " << server.num_active_clients);
+
+		for (int i = 0; i < server.max_clients; ++i)
+		{
+			if (server.clients[i].status != NULL)
+			{
+				byte msg[256] = {};
+
+				if (server_recieve(server, msg, 255, i) > 0)
+				{
+					//print(" CLIENT %d: %s\n", i, msg);
+					vec3 enemy_position = *((vec3*)msg);
+					printvec(enemy_position);
+					enemy->feet_position = enemy_position;
+				}
+			}
+		}
+
+		Sleep(100);
+	}
 }

@@ -12,23 +12,48 @@ struct Camera
 	vec3 position;
 	vec3 front, right, up;
 	float yaw, pitch;
+	float trauma;
 };
 
-void camera_update_dir(Camera* camera, float dx, float dy, float sensitivity = 0.003)
+void camera_update_dir(Camera* camera, float dx, float dy, float dtime, float sensitivity = 0.003)
 {
+	float trauma = camera->trauma;
+
+	if (camera->trauma > 1) camera->trauma = 1;
+	if (camera->trauma > 0) camera->trauma -= dtime;
+	else camera->trauma = 0;
+
+	float p1 = ((perlin((trauma + 0) * 1000) * 2) - 1) * trauma;
+	float p2 = ((perlin((trauma + 1) * 2000) * 2) - 1) * trauma;
+	float p3 = ((perlin((trauma + 2) * 3000) * 2) - 1) * trauma;
+
+	float shake_yaw   = ToRadians(p1);
+	float shake_pitch = ToRadians(p2);
+	float shake_roll  = ToRadians(p3);
+
 	camera->yaw   += (dx * sensitivity) / TWOPI;
 	camera->pitch += (dy * sensitivity) / TWOPI;
+
+	float yaw   = camera->yaw + shake_yaw;
+	float pitch = camera->pitch + shake_pitch;
+
+	// it feels a little different (better) if we let the shake actually move the camera a little
+	//camera->yaw   += shake_yaw;
+	//camera->pitch += shake_pitch;
 
 	if (camera->pitch >  PI / 2.01) camera->pitch =  PI / 2.01;
 	if (camera->pitch < -PI / 2.01) camera->pitch = -PI / 2.01;
 
-	camera->front.y = sin(camera->pitch);
-	camera->front.x = cos(camera->pitch) * cos(camera->yaw);
-	camera->front.z = cos(camera->pitch) * sin(camera->yaw);
+	camera->front.y = sin(pitch);
+	camera->front.x = cos(pitch) * cos(yaw);
+	camera->front.z = cos(pitch) * sin(yaw);
 
 	camera->front = normalize(camera->front);
 	camera->right = normalize(cross(camera->front, vec3(0, 1, 0)));
 	camera->up    = normalize(cross(camera->right, camera->front));
+
+	mat3 roll = glm::rotate(shake_roll, camera->front);
+	camera->up = roll * camera->up;
 }
 void camera_update_pos(Camera* camera, int direction, float distance)
 {
@@ -48,13 +73,13 @@ void init(Player* player)
 {
 	init_collider(&player->feet, vec3(0, 10, 0), vec3(0, 0, 0), vec3(0, 0, 0), 1, .25);
 }
-void update(Player* player, Keyboard keys, Mouse mouse, float dtime)
+void update(Player* player, Keyboard keys, Mouse mouse, float dtime, float shake)
 {
 	// i don't really have any idea why this works but id does so it stays 4 now
 
 	Sphere_Collider* feet = &player->feet;
 
-	camera_update_dir(&(player->eyes), mouse.dx, mouse.dy);
+	camera_update_dir(&(player->eyes), mouse.dx, mouse.dy, shake);
 
 	// decoupling movement controls from physics
 	float side_velocity    = 0;
@@ -75,16 +100,16 @@ void update(Player* player, Keyboard keys, Mouse mouse, float dtime)
 
 	vec3 force = vec3(feet->force.x, feet->force.y + GRAVITY, feet->force.z);
 
-	float bounce_velocity = 0;
+	float bounce_impulse = 0;
 	if (sphere_plane_intersect(*feet, ground) && dot(feet->velocity, ground.normal) < 0)
 	{
-		if (dot(feet->velocity, ground.normal) < 0) bounce_velocity = feet->velocity.y * -1.f;
-
+		if (dot(feet->velocity, ground.normal) < 0) bounce_impulse = feet->velocity.y * -1.f;
+	
 		float penetration_depth = abs(feet->position.y - feet->radius); // distance from contact point to plane
 		feet->velocity = penetration_depth * ground.normal * 10.f;
 	}
 
-	feet->velocity += dtime * ((force / feet->mass) + bounce_velocity);
+	feet->velocity += dtime * ((force / feet->mass) + bounce_impulse);
 	feet->position += dtime * feet->velocity;
 
 	static float jump_timer  = -1;
@@ -103,6 +128,12 @@ void update(Player* player, Keyboard keys, Mouse mouse, float dtime)
 
 	player->eyes.position   = player->feet.position;
 	player->eyes.position.y = player->feet.position.y + 1.3f + jump_offset;
+
+	//// weapons
+	//if (mouse.left_button.is_pressed && player->eyes.trauma < .25)
+	//{
+	//	player->eyes.trauma += .1;
+	//}
 }
 
 // rendering

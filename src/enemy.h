@@ -3,7 +3,8 @@
 // (FABRIK) inverse kinematics + ai = active ragdolls (probably need an animation update too)
 struct Enemy
 {
-	Sphere_Collider feet; // for movement, shouldn't be neccessary in multiplayer game
+	vec3 feet_position;
+	vec3 look_direction;
 	Cylinder_Collider hitbox;
 
 	float health = 100;
@@ -11,13 +12,11 @@ struct Enemy
 
 void init(Enemy* enemy)
 {
-	//init_collider(&enemy->feet  , vec3(3, 5, 3), vec3(0, 0, 0), .5);
-	//init_collider(&enemy->hitbox, vec3(0, 1, 0), vec3(0, 0, 0), 1, 1);
+	init_collider(&enemy->hitbox, vec3(0, 1, 0), vec3(0, 0, 0), vec3(0, 0, 0), 1, 1, .5);
 }
 void update(Enemy* enemy, float dtime)
 {
-//	update_collider(&enemy->feet, dtime);
-	enemy->hitbox.position = enemy->feet.position;
+	enemy->hitbox.position = enemy->feet_position;
 }
 
 // rendering
@@ -60,7 +59,7 @@ void update_renderer(Enemy_Renderer* renderer, Enemy enemy, float dtime)
 	//position += dtime * vec3(-2.5, 0, 0);
 
 	Enemy_Drawable drawable = {};
-	drawable.position = enemy.feet.position + vec3(-5, 1, -5);
+	drawable.position = enemy.feet_position;
 	drawable.rotation = mat3(.2) * point_at(vec3(0, 0, 1), vec3(0, 1, 0));
 
 	update(renderer->mesh, renderer->animation.num_bones, renderer->current_pose, sizeof(Enemy_Drawable), (byte*)(&drawable));

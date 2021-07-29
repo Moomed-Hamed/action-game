@@ -257,9 +257,13 @@ void update_renderer(Physics_Renderer* renderer, Physics_Colliders* colliders)
 	{
 		if (colliders->fixed.planes[i].scale.x > 0)
 		{
+			mat3 scale = mat3(1);
+			scale[0][0] = colliders->fixed.planes[i].scale.x;
+			scale[1][1] = colliders->fixed.planes[i].scale.y;
+
 			renderer->num_planes += 1;
 			renderer->planes[i].position = colliders->fixed.planes[i].position;
-			renderer->planes[i].transform = point_at(colliders->fixed.planes[i].normal, vec3(1, 0, 0)); // ???
+			renderer->planes[i].transform = point_at(colliders->fixed.planes[i].normal, vec3(1, 0, 0)) * scale; // ???
 		}
 	}
 

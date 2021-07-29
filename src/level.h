@@ -32,9 +32,7 @@ void update_level(Level* level, float dtime)
 	{
 		if (point_in_cylinder(level->bullets[i].position, level->enemy.hitbox))
 		{
-			level->enemy.feet.velocity += 1;
+			//level->enemy.feet.velocity += 1;
 		}
 	}
-
-	level->enemy.feet.position.y += GRAVITY * dtime;
 }

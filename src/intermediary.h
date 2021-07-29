@@ -1,5 +1,5 @@
 // Copyright (c) 2021 Mohamed Hamed
-// Intermediary version 28.7.21
+// Intermediary version 31.7.21
 
 #pragma comment(lib, "winmm")
 #pragma comment (lib, "Ws2_32.lib") // networking
@@ -98,6 +98,14 @@ void os_sleep(uint milliseconds)
 	play_sudio(sound);
 */
 
+#define MAX_SOUND_SIZE 2048 // ?
+
+struct Sound
+{
+	uint size;
+	byte data[MAX_SOUND_SIZE];
+};
+
 typedef ALuint Audio;
 
 Audio load_audio(const char* path)
@@ -132,9 +140,15 @@ void play_audio(Audio source_id)
 	alSourcePlay(source_id);
 }
 
-// math
-
 // linear interpolation
+float lerp(float start, float end, float amount)
+{
+	return (start + amount * (end - start));
+}
+float lerp_sin(float start, float end, float amount)
+{
+	return lerp(start, end, sin(amount * (PI / 2.f)));
+}
 vec3 lerp(vec3 start, vec3 end, float amount)
 {
 	return (start + amount * (end - start));
@@ -218,4 +232,121 @@ mat4 nlerp(mat4 frame_1, mat4 frame_2, float amount)
 	ret[2][3] = pos.z;
 
 	return ret;
+}
+
+// threads
+
+typedef DWORD WINAPI thread_function(LPVOID); // what is this sorcery?
+
+DWORD WINAPI thread_func(LPVOID param)
+{
+	printf("Thread Started");
+	return 0;
+}
+
+uint64 create_thread(thread_function function, void* params = NULL)
+{
+	DWORD thread_id = 0;
+	CreateThread(0, 0, function, params, 0, &thread_id);
+	
+	// CreateThread returns a handle to the thread.
+	// im not sure if i should be keeping it
+	return thread_id;
+}
+
+//uint test(float a) { out(a); return 0; }
+//typedef uint temp(float);
+//void wtf(temp func) { func(7); return; }
+
+// random
+
+#define BIT_NOISE_1 0xB5297A4D;
+#define BIT_NOISE_2 0x68E31DA4;
+#define BIT_NOISE_3 0x1B56C4E9;
+
+uint random_uint()
+{
+	uint seed = __rdtsc();
+	seed *= BIT_NOISE_1;
+	seed *= seed; // helps avoid linearity
+	seed ^= (seed >> 8);
+	seed += BIT_NOISE_2;
+	seed ^= (seed >> 8);
+	seed *= BIT_NOISE_3;
+	seed ^= (seed >> 8);
+	return seed;
+}
+
+int random_int()
+{
+	union
+	{
+		uint seed;
+		int ret;
+	} u;
+
+	u.seed = random_uint();
+
+	return u.ret;
+}
+
+int random_float()
+{
+	union {
+		uint seed;
+		float ret;
+	} u;
+
+	u.seed = random_uint();
+
+	return u.ret;
+}
+
+float random_chance() // random float between 0 and 1
+{
+	uint seed = random_uint();
+	return (float)seed / (float)UINT_MAX; // is there a better way to do this?
+}
+
+bool random_boolean(float probability_of_returning_true = 0.5)
+{
+	if (random_chance() < probability_of_returning_true) return true;
+	
+	return false;
+}
+
+int noise(uint n, uint seed = 0)
+{
+	n *= BIT_NOISE_1;
+	n += seed;
+	n ^= (n >> 8);
+	n += BIT_NOISE_2;
+	n ^= (n >> 8);
+	n *= BIT_NOISE_3;
+	n ^= (n >> 8);
+	return n;
+}
+
+float noise_chance(uint n, uint seed = 0)
+{
+	n *= BIT_NOISE_1;
+	n += seed;
+	n ^= (n >> 8);
+	n += BIT_NOISE_2;
+	n ^= (n >> 8);
+	n *= BIT_NOISE_3;
+	n ^= (n >> 8);
+
+	return (float)n / (float)UINT_MAX;
+}
+
+float perlin(float n)
+{
+	int x1 = (int)n;
+	int x2 = x1 + 1;
+
+	//int gradient_1 = noise(x1);
+	//int gradient_2 = noise(x2);
+
+	return lerp(noise_chance(x1), noise_chance(x2), n - (float)x1);
 }
