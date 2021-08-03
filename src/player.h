@@ -79,7 +79,7 @@ struct Player
 
 void init(Player* player)
 {
-	init_collider(&player->feet, vec3(0, 10, 0), vec3(0, 0, 0), vec3(0, 0, 0), 1, .25);
+	init_collider(&player->feet, vec3(0, 1, 0), vec3(0, 0, 0), vec3(0, 0, 0), 1, .25);
 }
 void update(Player* player, Keyboard keys, Mouse mouse, float dtime, float shake)
 {
@@ -217,7 +217,7 @@ struct Quad_Drawable
 struct Crosshair_Renderer
 {
 	Quad_Drawable quads[4];
-	Drawable_Quad mesh;
+	Drawable_Mesh_2D mesh;
 	Shader shader;
 };
 
@@ -229,7 +229,7 @@ void init(Crosshair_Renderer* renderer)
 	mesh_add_attrib_vec2(2, sizeof(Quad_Drawable), sizeof(vec2)); // scale
 	mesh_add_attrib_vec3(3, sizeof(Quad_Drawable), sizeof(vec2) + sizeof(vec2)); // color
 
-	load(&renderer->shader, "assets/shaders/gui.vert", "assets/shaders/gui.frag");
+	load(&renderer->shader, "assets/shaders/mesh_2D.vert", "assets/shaders/mesh_2D.frag");
 
 	vec2 position = vec2(0, 0);
 	vec2 scale    = vec2(.003, .005) / 2.f;
@@ -247,7 +247,9 @@ void init(Crosshair_Renderer* renderer)
 	renderer->quads[3].position = position - vec2(0, .01f);
 	renderer->quads[3].scale    = scale;
 	renderer->quads[3].color    = color;
-
+}
+void update(Crosshair_Renderer* renderer)
+{
 	update(renderer->mesh, 4 * sizeof(Quad_Drawable), (byte*)renderer->quads);
 }
 void draw(Crosshair_Renderer* renderer)

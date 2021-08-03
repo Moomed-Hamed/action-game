@@ -327,6 +327,75 @@ struct Particle_Emitter
 	Particle particles[MAX_PARTICLES];
 };
 
+void init(Particle_Emitter* emitter)
+{
+	for (uint i = 0; i < MAX_PARTICLES; i++)
+	{
+		emitter->particles[i].position = {};
+		emitter->particles[i].velocity = vec3(random_chance(), (.8 * random_chance()) + .2, random_chance());
+	}
+}
+
+void update(Particle_Emitter* emitter, float dtime)
+{
+	for (uint i = 0; i < MAX_PARTICLES; i++)
+	{
+		emitter->particles[i].position += emitter->particles[i].velocity * dtime;
+	}
+}
+
+// rendering
+
+struct Particle_Drawable
+{
+	vec3 position;
+	mat3 transform;
+};
+
+struct Particle_Renderer
+{
+	Particle_Drawable particles[MAX_PARTICLES];
+	Drawable_Mesh_UV mesh;
+	Shader shader;
+};
+
+void init(Particle_Renderer* renderer)
+{
+	load(&renderer->mesh, "assets/meshes/plane.mesh_uv", "assets/textures/palette.bmp", MAX_PARTICLES * sizeof(Particle_Drawable));
+	mesh_add_attrib_vec3(3, sizeof(Particle_Drawable), 0); // world pos
+	mesh_add_attrib_mat3(4, sizeof(Particle_Drawable), sizeof(vec3)); // transform
+
+	load(&(renderer->shader), "assets/shaders/mesh_uv_rot.vert", "assets/shaders/mesh_uv.frag");
+	bind(renderer->shader);
+	set_int(renderer->shader, "positions", 0);
+	set_int(renderer->shader, "normals"  , 1);
+	set_int(renderer->shader, "albedo"   , 2);
+	set_int(renderer->shader, "texture_sampler", 3);
+}
+void update_renderer(Particle_Renderer* renderer, Particle_Emitter* emitter, vec3 front)
+{
+	for (uint i = 0; i < MAX_PARTICLES; i++)
+	{
+		renderer->particles[i].position = emitter->particles[i].position;
+		renderer->particles[i].transform = mat3(.2) * point_at(normalize(front), vec3(0, 1, 0));
+	}
+
+	update(renderer->mesh, sizeof(Particle_Drawable) * MAX_PARTICLES, (byte*)(&renderer->particles));
+}
+void draw(Particle_Renderer* renderer, mat4 proj_view)
+{
+	bind(renderer->shader);
+	set_mat4(renderer->shader, "proj_view", proj_view);
+
+	bind_texture(renderer->mesh, renderer->mesh.texture_id);
+
+	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	glDisable(GL_CULL_FACE);
+	draw(renderer->mesh, MAX_PARTICLES);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	glEnable(GL_CULL_FACE);
+}
+
 /*
 void update_collider(Sphere_Collider* collider, float dtime)
 {

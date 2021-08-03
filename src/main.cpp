@@ -21,6 +21,15 @@ int main()
 	Crosshair_Renderer* gui = Alloc(Crosshair_Renderer, 1);
 	init(gui);
 
+	Particle_Emitter* emitter = Alloc(Particle_Emitter, 1);
+	init(emitter);
+
+	Particle_Renderer* particle_renderer = Alloc(Particle_Renderer, 1);
+	init(particle_renderer);
+
+	Drawable_Mesh_2D_UV test = {};
+	init(&test, "assets/textures/palette.bmp");
+
 	Physics_Colliders* colliders = Alloc(Physics_Colliders, 1);
 	init_colldier(colliders->dynamic.cubes    , vec3(1, .5, 3), vec3(0, 0, 0), vec3(0, 0, 0), 1, vec3(1, 1, 1));
 	init_collider(colliders->dynamic.cylinders, vec3(5, .5, 3), vec3(0, 0, 0), vec3(0, 0, 0), 1, 1, .5);
@@ -92,8 +101,11 @@ int main()
 
 		// game updates
 		update_level(level, frame_time);
+		update(emitter, frame_time);
 
 		// renderer updates
+		update(gui);
+		update_renderer(particle_renderer, emitter, level->player.eyes.front);
 		update_renderer(physics_renderer, colliders);
 		update_renderer(player_arms_renderer, level->player.eyes, frame_time, mouse.left_button.is_pressed, mouse.norm_x);
 		update_renderer(tile_renderer);
@@ -105,7 +117,7 @@ int main()
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		draw(gui);
-
+		draw(particle_renderer   , proj_view);
 		draw(player_arms_renderer, proj_view);
 		draw(tile_renderer       , proj_view);
 		draw(physics_renderer    , proj_view);

@@ -673,26 +673,16 @@ Shader make_lighting_shader()
 
 struct Drawable_Mesh_2D
 {
-	vec2 position;
-	vec2 scale;
-	vec3 color;
+	GLuint VAO, VBO, EBO;
 };
 
 struct Drawable_Mesh_2D_UV
 {
-	vec2 position;
-	vec2 scale;
-};
-
-#define MAX_DRAWABLE_QUADS (256)
-
-struct Drawable_Quad // i should probably update these naming conventions huh?
-{
 	GLuint VAO, VBO, EBO;
-	Shader shader;
+	GLuint texture_id;
 };
 
-void init(Drawable_Quad* renderer, uint reserved_mem_size = 0)
+void init(Drawable_Mesh_2D* mesh, uint reserved_mem_size = 0)
 {
 	float verts[] = {
 		// X     Y
@@ -709,18 +699,18 @@ void init(Drawable_Quad* renderer, uint reserved_mem_size = 0)
 
 	uint offset = reserved_mem_size;
 
-	glGenVertexArrays(1, &renderer->VAO);
-	glBindVertexArray(renderer->VAO);
+	glGenVertexArrays(1, &mesh->VAO);
+	glBindVertexArray(mesh->VAO);
 
 #define RENDER_MEM_SIZE (reserved_mem_size + sizeof(verts))
-	glGenBuffers(1, &renderer->VBO);
-	glBindBuffer(GL_ARRAY_BUFFER, renderer->VBO);
+	glGenBuffers(1, &mesh->VBO);
+	glBindBuffer(GL_ARRAY_BUFFER, mesh->VBO);
 	glBufferData(GL_ARRAY_BUFFER, RENDER_MEM_SIZE, NULL, GL_STATIC_DRAW);
 	glBufferSubData(GL_ARRAY_BUFFER, offset, sizeof(verts), verts);
 #undef RENDER_MEM_SIZE
 
-	glGenBuffers(1, &renderer->EBO);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, renderer->EBO);
+	glGenBuffers(1, &mesh->EBO);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh->EBO);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indicies), indicies, GL_STATIC_DRAW);
 
 	offset = reserved_mem_size;
@@ -730,17 +720,95 @@ void init(Drawable_Quad* renderer, uint reserved_mem_size = 0)
 		glEnableVertexAttribArray(vert_attrib);
 	}
 }
-void update(Drawable_Quad renderer, uint vb_size = NULL, byte* vb_data = NULL)
+void update(Drawable_Mesh_2D mesh, uint vb_size = NULL, byte* vb_data = NULL)
 {
 	if (vb_size > 0)
 	{
-		glBindBuffer(GL_ARRAY_BUFFER, renderer.VBO);
+		glBindBuffer(GL_ARRAY_BUFFER, mesh.VBO);
 		glBufferSubData(GL_ARRAY_BUFFER, 0, vb_size, vb_data);
 	}
 }
-void draw(Drawable_Quad renderer, uint num_instances = 1)
+void draw(Drawable_Mesh_2D mesh, uint num_instances = 1)
 {
-	glBindVertexArray(renderer.VAO);
+	glBindVertexArray(mesh.VAO);
+	glDrawElementsInstanced(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0, num_instances);
+}
+
+void init(Drawable_Mesh_2D_UV* mesh, const char* texture_path, uint reserved_mem_size = 0)
+{
+	float verts[] = {
+		// X     Y
+		-1.f, -1.f, // 0  1-------3
+		-1.f,  1.f, // 1  |       |
+		 1.f, -1.f, // 2  |       |
+		 1.f,  1.f  // 3  0-------2
+	};
+
+	uint indicies[] = {
+		0,2,3,
+		3,1,0
+	};
+
+	uint offset = reserved_mem_size;
+
+	glGenVertexArrays(1, &mesh->VAO);
+	glBindVertexArray(mesh->VAO);
+
+#define RENDER_MEM_SIZE (reserved_mem_size + sizeof(verts))
+	glGenBuffers(1, &mesh->VBO);
+	glBindBuffer(GL_ARRAY_BUFFER, mesh->VBO);
+	glBufferData(GL_ARRAY_BUFFER, RENDER_MEM_SIZE, NULL, GL_STATIC_DRAW);
+	glBufferSubData(GL_ARRAY_BUFFER, offset, sizeof(verts), verts);
+#undef RENDER_MEM_SIZE
+
+	glGenBuffers(1, &mesh->EBO);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh->EBO);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indicies), indicies, GL_STATIC_DRAW);
+
+	offset = reserved_mem_size;
+	{
+		GLint vert_attrib = 0; // position of a vertex
+		glVertexAttribPointer(vert_attrib, 2, GL_FLOAT, GL_FALSE, sizeof(vec2), (void*)offset);
+		glEnableVertexAttribArray(vert_attrib);
+	}
+
+	if (texture_path)
+	{
+		int width, height, num_channels;
+		byte* image;
+
+		stbi_set_flip_vertically_on_load(true);
+
+		image = stbi_load(texture_path, &width, &height, &num_channels, 0);
+
+		glGenTextures(1, &(mesh->texture_id));
+		glBindTexture(GL_TEXTURE_2D, mesh->texture_id);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glGenerateMipmap(GL_TEXTURE_2D);
+
+		stbi_image_free(image);
+	}
+}
+void update(Drawable_Mesh_2D_UV mesh, uint vb_size = NULL, byte* vb_data = NULL)
+{
+	if (vb_size > 0)
+	{
+		glBindBuffer(GL_ARRAY_BUFFER, mesh.VBO);
+		glBufferSubData(GL_ARRAY_BUFFER, 0, vb_size, vb_data);
+	}
+}
+void bind_texture(Drawable_Mesh_2D_UV mesh, uint texture_unit = 0)
+{
+	glActiveTexture(GL_TEXTURE0 + texture_unit);
+	glBindTexture(GL_TEXTURE_2D, mesh.texture_id);
+}
+void draw(Drawable_Mesh_2D_UV mesh, uint num_instances = 1)
+{
+	glBindVertexArray(mesh.VAO);
 	glDrawElementsInstanced(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0, num_instances);
 }
 
