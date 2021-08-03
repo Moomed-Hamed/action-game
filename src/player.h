@@ -17,15 +17,22 @@ struct Camera
 
 void camera_update_dir(Camera* camera, float dx, float dy, float dtime, float sensitivity = 0.003)
 {
+	// camera shake
 	float trauma = camera->trauma;
+
+	static uint offset = random_uint() % 16;
 
 	if (camera->trauma > 1) camera->trauma = 1;
 	if (camera->trauma > 0) camera->trauma -= dtime;
-	else camera->trauma = 0;
+	else
+	{
+		camera->trauma = 0;
+		offset = random_uint() % 16;
+	}
 
-	float p1 = ((perlin((trauma + 0) * 1000) * 2) - 1) * trauma;
-	float p2 = ((perlin((trauma + 1) * 2000) * 2) - 1) * trauma;
-	float p3 = ((perlin((trauma + 2) * 3000) * 2) - 1) * trauma;
+	float p1 = ((perlin((trauma + offset + 0) * 1000) * 2) - 1) * trauma;
+	float p2 = ((perlin((trauma + offset + 1) * 2000) * 2) - 1) * trauma;
+	float p3 = ((perlin((trauma + offset + 2) * 3000) * 2) - 1) * trauma;
 
 	float shake_yaw   = ToRadians(p1);
 	float shake_pitch = ToRadians(p2);
@@ -37,10 +44,11 @@ void camera_update_dir(Camera* camera, float dx, float dy, float dtime, float se
 	float yaw   = camera->yaw + shake_yaw;
 	float pitch = camera->pitch + shake_pitch;
 
-	// it feels a little different (better) if we let the shake actually move the camera a little
+	// it feels a little different (better?) if we let the shake actually move the camera a little
 	//camera->yaw   += shake_yaw;
 	//camera->pitch += shake_pitch;
 
+	// updating camera direction
 	if (camera->pitch >  PI / 2.01) camera->pitch =  PI / 2.01;
 	if (camera->pitch < -PI / 2.01) camera->pitch = -PI / 2.01;
 
@@ -195,4 +203,55 @@ void draw(Player_Arms_Renderer* renderer, mat4 proj_view)
 	set_mat4(renderer->shader, "proj_view", proj_view);
 	bind_texture(renderer->mesh, 4);
 	draw(renderer->mesh, 1);
+}
+
+// crosshair rendering
+
+struct Quad_Drawable
+{
+	vec2 position;
+	vec2 scale;
+	vec3 color;
+};
+
+struct Crosshair_Renderer
+{
+	Quad_Drawable quads[4];
+	Drawable_Quad mesh;
+	Shader shader;
+};
+
+void init(Crosshair_Renderer* renderer)
+{
+	*renderer = {};
+	init(&renderer->mesh, 4 * sizeof(Quad_Drawable));
+	mesh_add_attrib_vec2(1, sizeof(Quad_Drawable), 0); // position
+	mesh_add_attrib_vec2(2, sizeof(Quad_Drawable), sizeof(vec2)); // scale
+	mesh_add_attrib_vec3(3, sizeof(Quad_Drawable), sizeof(vec2) + sizeof(vec2)); // color
+
+	load(&renderer->shader, "assets/shaders/gui.vert", "assets/shaders/gui.frag");
+
+	vec2 position = vec2(0, 0);
+	vec2 scale    = vec2(.003, .005) / 2.f;
+	vec3 color    = vec3(1, 0, 0);
+
+	renderer->quads[0].position = position + vec2(.01f, 0);
+	renderer->quads[0].scale    = scale;
+	renderer->quads[0].color    = color;
+	renderer->quads[1].position = position - vec2(.01f, 0);
+	renderer->quads[1].scale    = scale;
+	renderer->quads[1].color    = color;
+	renderer->quads[2].position = position + vec2(0, .01f);
+	renderer->quads[2].scale    = scale;
+	renderer->quads[2].color    = color;
+	renderer->quads[3].position = position - vec2(0, .01f);
+	renderer->quads[3].scale    = scale;
+	renderer->quads[3].color    = color;
+
+	update(renderer->mesh, 4 * sizeof(Quad_Drawable), (byte*)renderer->quads);
+}
+void draw(Crosshair_Renderer* renderer)
+{
+	bind(renderer->shader);
+	draw(renderer->mesh, 4);
 }

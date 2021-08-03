@@ -276,7 +276,6 @@ uint random_uint()
 	seed ^= (seed >> 8);
 	return seed;
 }
-
 int random_int()
 {
 	union
@@ -289,7 +288,6 @@ int random_int()
 
 	return u.ret;
 }
-
 int random_float()
 {
 	union {
@@ -301,20 +299,17 @@ int random_float()
 
 	return u.ret;
 }
-
 float random_chance() // random float between 0 and 1
 {
 	uint seed = random_uint();
 	return (float)seed / (float)UINT_MAX; // is there a better way to do this?
 }
-
 bool random_boolean(float probability_of_returning_true = 0.5)
 {
 	if (random_chance() < probability_of_returning_true) return true;
 	
 	return false;
 }
-
 int noise(uint n, uint seed = 0)
 {
 	n *= BIT_NOISE_1;
@@ -326,7 +321,6 @@ int noise(uint n, uint seed = 0)
 	n ^= (n >> 8);
 	return n;
 }
-
 float noise_chance(uint n, uint seed = 0)
 {
 	n *= BIT_NOISE_1;
@@ -339,7 +333,6 @@ float noise_chance(uint n, uint seed = 0)
 
 	return (float)n / (float)UINT_MAX;
 }
-
 float perlin(float n)
 {
 	int x1 = (int)n;

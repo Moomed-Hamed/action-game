@@ -18,13 +18,8 @@ int main()
 	Enemy_Renderer* enemy_renderer = Alloc(Enemy_Renderer, 1);
 	init(enemy_renderer);
 
-	GUI_Renderer* gui = Alloc(GUI_Renderer, 1);
+	Crosshair_Renderer* gui = Alloc(Crosshair_Renderer, 1);
 	init(gui);
-
-	gui->num_quads = 1;
-	gui->quads[0].position = vec2(0, 0);
-	gui->quads[0].scale    = vec2(.003, .005);
-	gui->quads[0].color    = vec3(1, 0, 0);
 
 	Physics_Colliders* colliders = Alloc(Physics_Colliders, 1);
 	init_colldier(colliders->dynamic.cubes    , vec3(1, .5, 3), vec3(0, 0, 0), vec3(0, 0, 0), 1, vec3(1, 1, 1));
@@ -69,6 +64,17 @@ int main()
 
 		update(&level->player, keys, mouse, frame_time, frame_time);
 
+		if (mouse.left_button.is_pressed)
+		{
+			gui->quads[0].color = vec3(1, 0, 0);
+			gui->quads[0].scale = vec2(.004, .008);
+		}
+		else
+		{
+			gui->quads[0].color = vec3(1, 1, 1);
+			gui->quads[0].scale = vec2(.003, .005);
+		}
+
 		if (mouse.left_button.is_pressed && !mouse.left_button.was_pressed)
 		{
 			level->bullets[0].position = level->player.eyes.position + (level->player.eyes.front * .36f);
@@ -81,6 +87,7 @@ int main()
 		//physics updates
 		if (keys.R.is_pressed) colliders->dynamic.spheres[0].velocity += level->player.eyes.front;
 		if (keys.F.is_pressed) colliders->dynamic.spheres[0].velocity -= level->player.eyes.front;
+		if (keys.G.is_pressed) level->player.eyes.trauma = 1;
 		//update_colliders(colliders, frame_time);
 
 		// game updates
@@ -97,8 +104,6 @@ int main()
 		glBindFramebuffer(GL_FRAMEBUFFER, g_buffer.FBO);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		update(gui);
-		bind(gui->shader);
 		draw(gui);
 
 		draw(player_arms_renderer, proj_view);

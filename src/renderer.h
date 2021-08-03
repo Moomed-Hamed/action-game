@@ -673,33 +673,26 @@ Shader make_lighting_shader()
 
 struct Drawable_Mesh_2D
 {
-
-};
-
-struct Drawable_Mesh_2D_UV
-{
-
-};
-
-#define MAX_GUI_QUADS (256)
-
-struct GUI_Quad_Drawable
-{
 	vec2 position;
 	vec2 scale;
 	vec3 color;
 };
 
-struct GUI_Renderer
+struct Drawable_Mesh_2D_UV
 {
-	uint num_quads;
-	GUI_Quad_Drawable quads[MAX_GUI_QUADS];
+	vec2 position;
+	vec2 scale;
+};
 
+#define MAX_DRAWABLE_QUADS (256)
+
+struct Drawable_Quad // i should probably update these naming conventions huh?
+{
 	GLuint VAO, VBO, EBO;
 	Shader shader;
 };
 
-void init(GUI_Renderer* renderer)
+void init(Drawable_Quad* renderer, uint reserved_mem_size = 0)
 {
 	float verts[] = {
 		// X     Y
@@ -714,7 +707,6 @@ void init(GUI_Renderer* renderer)
 		3,1,0
 	};
 
-	uint reserved_mem_size = MAX_GUI_QUADS * sizeof(GUI_Quad_Drawable);
 	uint offset = reserved_mem_size;
 
 	glGenVertexArrays(1, &renderer->VAO);
@@ -737,57 +729,20 @@ void init(GUI_Renderer* renderer)
 		glVertexAttribPointer(vert_attrib, 2, GL_FLOAT, GL_FALSE, sizeof(vec2), (void*)offset);
 		glEnableVertexAttribArray(vert_attrib);
 	}
-
-	mesh_add_attrib_vec2(1, sizeof(GUI_Quad_Drawable), 0);
-	mesh_add_attrib_vec2(2, sizeof(GUI_Quad_Drawable), sizeof(vec2));
-	mesh_add_attrib_vec3(3, sizeof(GUI_Quad_Drawable), sizeof(vec2) + sizeof(vec2));
-
-	load(&renderer->shader, "assets/shaders/gui.vert", "assets/shaders/gui.frag");
 }
-void update(GUI_Renderer* renderer)//, GUI_Quad* quads)
+void update(Drawable_Quad renderer, uint vb_size = NULL, byte* vb_data = NULL)
 {
-	if (renderer->num_quads > 0)
+	if (vb_size > 0)
 	{
-		glBindBuffer(GL_ARRAY_BUFFER, renderer->VBO);
-		glBufferSubData(GL_ARRAY_BUFFER, 0, renderer->num_quads * sizeof(GUI_Quad_Drawable), renderer->quads);
+		glBindBuffer(GL_ARRAY_BUFFER, renderer.VBO);
+		glBufferSubData(GL_ARRAY_BUFFER, 0, vb_size, vb_data);
 	}
 }
-void draw(GUI_Renderer* renderer)//, uint vb_size = NULL, byte* vb_data = NULL, uint num_instances = 1)
+void draw(Drawable_Quad renderer, uint num_instances = 1)
 {
-	glBindVertexArray(renderer->VAO);
-	glDrawElementsInstanced(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0, renderer->num_quads);
+	glBindVertexArray(renderer.VAO);
+	glDrawElementsInstanced(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0, num_instances);
 }
-
-struct GUI_Quad
-{
-	uint type;
-	vec2 position;
-	vec2 scale;
-	vec3 color;
-};
-
-// returns index of added quad or INVALID if no space available
-uint add_gui_quad(GUI_Quad* quads, vec2 position = { 0,0 }, vec3 color = { 1,1,1 }, vec2 scale = { 1,1 })
-{
-	for (uint i = 0; i < MAX_GUI_QUADS; i++)
-	{
-		if (quads[i].type == NULL)
-		{
-			quads[i].position = position;
-			quads[i].color = color;
-			quads[i].scale = scale;
-
-			return i;
-		}
-	}
-
-	return INVALID;
-}
-
-struct GUI_Constraint
-{
-	int type;
-};
 
 // animation
 

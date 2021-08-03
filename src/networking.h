@@ -94,9 +94,7 @@ int init(Server* server, const char* ip, const char* port, int max_clients = 1)
 
 	return 0;
 }
-
-// handles new connections & disconnected clients
-int server_update_connections(Server* server)
+int server_update_connections(Server* server) // handles new connections & disconnected clients
 {
 	SOCKET test_socket = INVALID_SOCKET;
 
