@@ -314,7 +314,7 @@ void draw(Physics_Renderer* renderer, mat4 proj_view)
 
 // particle fx
 
-#define MAX_PARTICLES 16
+#define MAX_PARTICLES 32
 
 struct Particle
 {
@@ -331,16 +331,17 @@ void init(Particle_Emitter* emitter)
 {
 	for (uint i = 0; i < MAX_PARTICLES; i++)
 	{
-		emitter->particles[i].position = {};
-		emitter->particles[i].velocity = vec3(random_chance(), (.8 * random_chance()) + .2, random_chance());
+		emitter->particles[i].position = vec3(5, 0, 0);
+		emitter->particles[i].velocity = vec3(random_chance_signed(), (.8 * random_chance()) + .2, random_chance_signed());
+		//emitter->particles[i].velocity = vec3(random_chance_signed(), 0, random_chance_signed());
 	}
 }
-
 void update(Particle_Emitter* emitter, float dtime)
 {
 	for (uint i = 0; i < MAX_PARTICLES; i++)
 	{
 		emitter->particles[i].position += emitter->particles[i].velocity * dtime;
+		emitter->particles[i].velocity.y += dtime * .001 * random_chance();
 	}
 }
 
@@ -361,7 +362,7 @@ struct Particle_Renderer
 
 void init(Particle_Renderer* renderer)
 {
-	load(&renderer->mesh, "assets/meshes/plane.mesh_uv", "assets/textures/palette.bmp", MAX_PARTICLES * sizeof(Particle_Drawable));
+	load(&renderer->mesh, "assets/meshes/billboard.mesh_uv", "assets/textures/palette.bmp", MAX_PARTICLES * sizeof(Particle_Drawable));
 	mesh_add_attrib_vec3(3, sizeof(Particle_Drawable), 0); // world pos
 	mesh_add_attrib_mat3(4, sizeof(Particle_Drawable), sizeof(vec3)); // transform
 
@@ -387,37 +388,14 @@ void draw(Particle_Renderer* renderer, mat4 proj_view)
 	bind(renderer->shader);
 	set_mat4(renderer->shader, "proj_view", proj_view);
 
-	bind_texture(renderer->mesh, renderer->mesh.texture_id);
+	bind_texture(renderer->mesh, 3);
 
 	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	glDisable(GL_CULL_FACE);
 	draw(renderer->mesh, MAX_PARTICLES);
-	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	glEnable(GL_CULL_FACE);
+	//glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
-
-/*
-void update_collider(Sphere_Collider* collider, float dtime)
-{
-	Plane_Collider ground = {};
-
-	collider->force.y += GRAVITY * dtime;
-
-	if (sphere_plane_intersect(*collider, ground))
-	{
-		float penetration_depth = 0;
-
-		collider->position.y -= GRAVITY * dtime;
-
-		vec3 pos = vec3(collider->position.x, collider->position.y - collider->radius, collider->position.z);
-		float dot_product = glm::dot(vec3(0, 1, 0), pos); //out(dot_product);
-		collider->velocity.y = dot_product * -10; // assert(dot_product < 0);
-	}
-
-	collider->velocity += (collider->force / collider->mass) * dtime;
-	collider->position += collider->velocity * dtime;
-	// collider->velocity *= .9f; // damping
-} */
 
 /*
 void update_collider(Cube_Collider* collider, float dtime)
@@ -436,33 +414,6 @@ void update_collider(Cube_Collider* collider, float dtime)
 
 	collider->velocity *= .85f; // damping
 	collider->position += collider->velocity * dtime;
-}
-void update_collider(Sphere_Collider* collider, float dtime)
-{
-	Plane_Collider_Static ground, wall;
-	ground = Plane_Collider_Static{ vec3(0, 0, 0), vec2(100, 100), vec3(0, 1, 0) };
-	wall   = Plane_Collider_Static{ vec3(5,0.5,6), vec2(1,1), vec3(0,0,-1) };
-
-	collider->position.y += GRAVITY * dtime;
-
-	if (sphere_plane_intersect(*collider, ground))
-	{
-		collider->position.y -= GRAVITY * dtime;
-
-		vec3 pos = vec3(collider->position.x, collider->position.y - collider->radius, collider->position.z);
-		float dot_product = glm::dot(vec3(0, 1, 0), pos); //out(dot_product);
-		collider->velocity.y = dot_product * -10; // assert(dot_product < 0);
-	}
-
-	if (sphere_plane_intersect(*collider, wall))
-	{
-		vec3 pos = vec3(collider->position.x, collider->position.y - collider->radius, collider->position.z);
-		float dot_product = glm::dot(wall.normal, pos);
-		collider->velocity.z = dot_product * 1.f; // assert(dot_product < 0);
-	}
-
-	collider->position += collider->velocity * dtime;
-	collider->velocity *= .9f; // damping
 }
 void update_collider(Cylinder_Collider* collider, float dtime)
 {

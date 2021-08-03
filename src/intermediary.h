@@ -1,5 +1,5 @@
 // Copyright (c) 2021 Mohamed Hamed
-// Intermediary version 31.7.21
+// Intermediary version 3.8.21
 
 #pragma comment(lib, "winmm")
 #pragma comment (lib, "Ws2_32.lib") // networking
@@ -234,8 +234,7 @@ mat4 nlerp(mat4 frame_1, mat4 frame_2, float amount)
 	return ret;
 }
 
-// threads
-
+// multithreading
 typedef DWORD WINAPI thread_function(LPVOID); // what is this sorcery?
 
 DWORD WINAPI thread_func(LPVOID param)
@@ -258,7 +257,7 @@ uint64 create_thread(thread_function function, void* params = NULL)
 //typedef uint temp(float);
 //void wtf(temp func) { func(7); return; }
 
-// random
+// rng & noise
 
 #define BIT_NOISE_1 0xB5297A4D;
 #define BIT_NOISE_2 0x68E31DA4;
@@ -303,6 +302,10 @@ float random_chance() // random float between 0 and 1
 {
 	uint seed = random_uint();
 	return (float)seed / (float)UINT_MAX; // is there a better way to do this?
+}
+float random_chance_signed() // random float between -1 and 1
+{
+	return ((random_chance() * 2) - 1);
 }
 bool random_boolean(float probability_of_returning_true = 0.5)
 {

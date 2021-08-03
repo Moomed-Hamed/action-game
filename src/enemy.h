@@ -1,4 +1,4 @@
-#include "bullets.h"
+#include "guns.h"
 
 // (FABRIK) inverse kinematics + ai = active ragdolls (probably need an animation update too)
 struct Enemy
@@ -60,7 +60,7 @@ void update_renderer(Enemy_Renderer* renderer, Enemy enemy, float dtime)
 
 	Enemy_Drawable drawable = {};
 	drawable.position = enemy.feet_position;
-	drawable.rotation = mat3(.2) * point_at(vec3(0, 0, 1), vec3(0, 1, 0));
+	drawable.rotation = mat3(.2) * point_at(vec3(enemy.look_direction.x, 0, enemy.look_direction.z), vec3(0, 1, 0));
 
 	update(renderer->mesh, renderer->animation.num_bones, renderer->current_pose, sizeof(Enemy_Drawable), (byte*)(&drawable));
 }

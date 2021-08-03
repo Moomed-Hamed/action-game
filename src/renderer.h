@@ -1,4 +1,4 @@
-#include "window_and_input.h"
+#include "window.h"
 
 /* -- how 2 draw a mesh --
 

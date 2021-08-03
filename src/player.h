@@ -235,10 +235,10 @@ void init(Crosshair_Renderer* renderer)
 	vec2 scale    = vec2(.003, .005) / 2.f;
 	vec3 color    = vec3(1, 0, 0);
 
-	renderer->quads[0].position = position + vec2(.01f, 0);
+	renderer->quads[0].position = position + vec2(.006f, 0);
 	renderer->quads[0].scale    = scale;
 	renderer->quads[0].color    = color;
-	renderer->quads[1].position = position - vec2(.01f, 0);
+	renderer->quads[1].position = position - vec2(.006f, 0);
 	renderer->quads[1].scale    = scale;
 	renderer->quads[1].color    = color;
 	renderer->quads[2].position = position + vec2(0, .01f);

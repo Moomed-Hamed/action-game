@@ -72,19 +72,47 @@ void draw(Tile_Renderer* renderer, mat4 proj_view)
 
 // ---
 
-struct Barrel
+struct Prop_Barrel
 {
 	Cylinder_Collider collider;
 };
 
-void init(Barrel* barrels)
+void init(Prop_Barrel* barrels)
 {
 
 }
-void update(Barrel* barrels)
+void update(Prop_Barrel* barrels)
 {
 
 }
+
+struct Prop_Crate
+{
+	Cylinder_Collider collider;
+};
+
+void init(Prop_Crate* barrels)
+{
+
+}
+void update(Prop_Crate* barrels)
+{
+
+}
+
+// pickups (health, ammo, etc.)
+struct Pickup
+{
+	uint type;
+	vec3 position;
+};
+
+// orbs (xp, health, etc.)
+struct Orb
+{
+	uint type;
+	vec3 position;
+	vec3 velocity;
+};
 
 // destructible walls
-// pickups (health, ammo, etc.)

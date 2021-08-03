@@ -9,6 +9,7 @@ int main()
 	Mouse    mouse  = {};
 	Keyboard keys   = {};
 
+	//init_window(&window, 1280, 720, "action game");
 	init_window(&window, 1920, 1080, "action game");
 	init_keyboard(&keys);
 
@@ -73,17 +74,6 @@ int main()
 
 		update(&level->player, keys, mouse, frame_time, frame_time);
 
-		if (mouse.left_button.is_pressed)
-		{
-			gui->quads[0].color = vec3(1, 0, 0);
-			gui->quads[0].scale = vec2(.004, .008);
-		}
-		else
-		{
-			gui->quads[0].color = vec3(1, 1, 1);
-			gui->quads[0].scale = vec2(.003, .005);
-		}
-
 		if (mouse.left_button.is_pressed && !mouse.left_button.was_pressed)
 		{
 			level->bullets[0].position = level->player.eyes.position + (level->player.eyes.front * .36f);
@@ -101,7 +91,8 @@ int main()
 
 		// game updates
 		update_level(level, frame_time);
-		update(emitter, frame_time);
+		update(emitter, frame_time / 3);
+		level->enemy.look_direction = level->player.eyes.right * -1.f;
 
 		// renderer updates
 		update(gui);

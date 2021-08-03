@@ -17,7 +17,10 @@ uniform sampler2D texture_sampler;
 
 void main()
 {
+	vec4 color = vec4(texture(texture_sampler, vs_out.tex_coord).rgb, 1);
+	//if(color.x > .9 && color.y > .9 && color.z > .9) discard;
+
 	frag_position = vec4(vs_out.frag_pos, 0);
 	frag_normal   = vec4(vs_out.normal, 0);
-	frag_albedo   = vec4(texture(texture_sampler, vs_out.tex_coord).rgb, 1);
+	frag_albedo   = color;
 }
