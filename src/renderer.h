@@ -57,6 +57,11 @@ void load(Shader* shader, const char* vert_path, const char* frag_path)
 	glAttachShader(shader->id, frag_shader);
 	glLinkProgram (shader->id);
 
+	GLsizei length = 0;
+	char error[256] = {};
+	glGetProgramInfoLog(shader->id, 256, &length, error);
+	if(length > 0) out(error);
+
 	glDeleteShader(vert_shader);
 	glDeleteShader(frag_shader);
 }
@@ -112,6 +117,18 @@ struct Mesh_Data_Anim
 
 	vec3*  positions;
 	vec3*  normals;
+	vec3*  weights;
+	ivec3* bones;
+	uint*  indices;
+};
+
+struct Mesh_Data_Anim_UV
+{
+	uint num_vertices, num_indices;
+
+	vec3*  positions;
+	vec3*  normals;
+	vec2*  textures;
 	vec3*  weights;
 	ivec3* bones;
 	uint*  indices;
@@ -175,6 +192,40 @@ void load(Mesh_Data_Anim* data, const char* path)
 
 	fclose(mesh_file);
 }
+void load(Mesh_Data_Anim_UV* data, const char* path)
+{
+	FILE* mesh_file = fopen(path, "rb");
+	if (!mesh_file) { print("could not open mesh file: %s\n", path); stop; return; }
+
+	fread(&data->num_vertices, sizeof(uint), 1, mesh_file);
+	fread(&data->num_indices , sizeof(uint), 1, mesh_file);
+
+	data->positions = (vec3*) calloc(data->num_vertices, sizeof(vec3));
+	data->normals   = (vec3*) calloc(data->num_vertices, sizeof(vec3));
+	data->weights   = (vec3*) calloc(data->num_vertices, sizeof(vec3));
+	data->bones     = (ivec3*)calloc(data->num_vertices, sizeof(ivec3));
+	data->textures  = (vec2*) calloc(data->num_vertices, sizeof(vec2));
+	data->indices   = (uint*) calloc(data->num_indices , sizeof(uint));
+
+	fread(data->positions, sizeof(vec3) , data->num_vertices, mesh_file);
+	fread(data->normals  , sizeof(vec3) , data->num_vertices, mesh_file);
+	fread(data->weights  , sizeof(vec3) , data->num_vertices, mesh_file);
+	fread(data->bones    , sizeof(ivec3), data->num_vertices, mesh_file);
+	fread(data->textures , sizeof(vec2) , data->num_vertices, mesh_file);
+	fread(data->indices  , sizeof(uint) , data->num_indices , mesh_file);
+
+	//for (int i = 0; i < data->num_vertices; i++)
+	//{
+	//	printvec(data->positions[i]);
+	//	printvec(data->normals[i]);
+	//	printvec(data->weights[i]);
+	//	printvec(data->bones[i]);
+	//	out(data->textures[i].x << ',' << data->textures[i].y);
+	//	//stop;
+	//}
+
+	fclose(mesh_file);
+}
 
 struct Drawable_Mesh
 {
@@ -192,6 +243,12 @@ struct Drawable_Mesh_Anim
 {
 	GLuint VAO, VBO, EBO, UBO;
 	uint num_indices;
+};
+
+struct Drawable_Mesh_Anim_UV
+{
+	GLuint VAO, VBO, EBO, UBO;
+	uint num_indices, texture_id;
 };
 
 void load(Drawable_Mesh* mesh, const char* path, uint reserved_mem_size = 0)
@@ -395,6 +452,112 @@ void update(Drawable_Mesh_Anim mesh, uint num_bones, mat4* pose, uint vb_size, b
 	glBufferSubData(GL_UNIFORM_BUFFER, 0, num_bones * sizeof(mat4), pose);
 }
 void draw(Drawable_Mesh_Anim mesh, uint num_instances = 1)
+{
+	glBindVertexArray(mesh.VAO);
+	glDrawElementsInstanced(GL_TRIANGLES, mesh.num_indices, GL_UNSIGNED_INT, 0, num_instances);
+}
+
+void load(Drawable_Mesh_Anim_UV* mesh, const char* path, const char* texture_path, uint reserved_mem_size = 0)
+{
+	Mesh_Data_Anim_UV mesh_data;
+	load(&mesh_data, path);
+	mesh->num_indices = mesh_data.num_indices;
+
+	glGenVertexArrays(1, &(mesh->VAO));
+	glBindVertexArray(mesh->VAO);
+
+	uint vertmemsize = mesh_data.num_vertices * sizeof(vec3);
+	uint bonememsize = mesh_data.num_vertices * sizeof(ivec3);
+	uint texmemsize  = mesh_data.num_vertices * sizeof(vec2);
+	uint offset = reserved_mem_size;
+
+#define RENDER_MEM_SIZE (reserved_mem_size + (vertmemsize + vertmemsize + vertmemsize + bonememsize + texmemsize)) // positions, normals, weights, bones, and textures
+	glGenBuffers(1, &(mesh->VBO));
+	glBindBuffer(GL_ARRAY_BUFFER, mesh->VBO);
+	glBufferData(GL_ARRAY_BUFFER, RENDER_MEM_SIZE, NULL, GL_STATIC_DRAW);
+	glBufferSubData(GL_ARRAY_BUFFER, offset + (vertmemsize * 0), vertmemsize, mesh_data.positions);
+	glBufferSubData(GL_ARRAY_BUFFER, offset + (vertmemsize * 1), vertmemsize, mesh_data.normals  );
+	glBufferSubData(GL_ARRAY_BUFFER, offset + (vertmemsize * 2), vertmemsize, mesh_data.weights  );
+	glBufferSubData(GL_ARRAY_BUFFER, offset + (vertmemsize * 3), bonememsize, mesh_data.bones    );
+	glBufferSubData(GL_ARRAY_BUFFER, offset + (vertmemsize * 3) + bonememsize, texmemsize , mesh_data.textures );
+#undef RENDER_MEM_SIZE
+
+	glGenBuffers(1, &(mesh->EBO));
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh->EBO);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh_data.num_indices * sizeof(uint), mesh_data.indices, GL_STATIC_DRAW);
+
+	free(mesh_data.positions);
+	free(mesh_data.normals);
+	free(mesh_data.textures);
+	free(mesh_data.weights);
+	free(mesh_data.bones);
+	free(mesh_data.indices);
+
+	offset = reserved_mem_size;
+	{
+		GLint pos_attrib = 0; // position of a vertex
+		glVertexAttribPointer(pos_attrib, 3, GL_FLOAT, GL_FALSE, sizeof(vec3), (void*)(offset + (vertmemsize * 0)));
+		glEnableVertexAttribArray(pos_attrib);
+
+		GLint norm_attrib = 1; // normal of a vertex
+		glVertexAttribPointer(norm_attrib, 3, GL_FLOAT, GL_FALSE, sizeof(vec3), (void*)(offset + (vertmemsize * 1)));
+		glEnableVertexAttribArray(norm_attrib);
+
+		GLint weight_attrib = 2; // weights of bone influence
+		glVertexAttribPointer(weight_attrib, 3, GL_FLOAT, GL_FALSE, sizeof(vec3), (void*)(offset + (vertmemsize * 2)));
+		glEnableVertexAttribArray(weight_attrib);
+
+		GLint bone_attrib = 3; // id's of 3 bones that influence this vertex
+		glVertexAttribIPointer(bone_attrib, 3, GL_INT, sizeof(ivec3), (void*)(offset + (vertmemsize * 3)));
+		glEnableVertexAttribArray(bone_attrib);
+
+		GLint texture_attrib = 4; // texture coordinates of a vertex
+		glVertexAttribPointer(texture_attrib, 2, GL_FLOAT, GL_FALSE, sizeof(vec2), (void*)(offset + (vertmemsize * 3) + bonememsize));
+		glEnableVertexAttribArray(texture_attrib);
+	}
+
+	glGenBuffers(1, &mesh->UBO);
+	glBindBuffer(GL_UNIFORM_BUFFER, mesh->UBO);
+	glBufferData(GL_UNIFORM_BUFFER, 16 * sizeof(mat4), NULL, GL_DYNAMIC_DRAW); // WARNING MAX JOINTS HARDCODED IN AS 16
+
+	//glBindBufferRange(GL_UNIFORM_BUFFER, 0, renderdata->UBO, 0, model_data.num_joints * sizeof(glm::mat4));
+	glBindBufferBase(GL_UNIFORM_BUFFER, 0, mesh->UBO);
+
+	if (texture_path)
+	{
+		int width, height, num_channels;
+		byte* image;
+
+		stbi_set_flip_vertically_on_load(true);
+
+		image = stbi_load(texture_path, &width, &height, &num_channels, 0);
+
+		glGenTextures(1, &(mesh->texture_id));
+		glBindTexture(GL_TEXTURE_2D, mesh->texture_id);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glGenerateMipmap(GL_TEXTURE_2D);
+
+		stbi_image_free(image);
+	}
+}
+void update(Drawable_Mesh_Anim_UV mesh, uint num_bones, mat4* pose, uint vb_size, byte* vb_data)
+{
+	glBindBuffer(GL_ARRAY_BUFFER, mesh.VBO);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, vb_size, vb_data);
+
+	glBindBuffer(GL_UNIFORM_BUFFER, mesh.UBO);
+	glBufferSubData(GL_UNIFORM_BUFFER, 0, num_bones * sizeof(mat4), pose);
+}
+void bind_texture(Drawable_Mesh_Anim_UV mesh, uint texture_unit = 0)
+{
+	glActiveTexture(GL_TEXTURE0 + texture_unit);
+	glBindTexture(GL_TEXTURE_2D, mesh.texture_id);
+}
+void draw(Drawable_Mesh_Anim_UV mesh, uint num_instances = 1)
 {
 	glBindVertexArray(mesh.VAO);
 	glDrawElementsInstanced(GL_TRIANGLES, mesh.num_indices, GL_UNSIGNED_INT, 0, num_instances);
@@ -615,9 +778,8 @@ struct Directional_Light_Drawable
 
 struct Light_Renderer
 {
-	uint num_point_lights, num_spot_lights, num_directional_lights;
 	Point_Light_Drawable* point_lights;
-	Spot_Light_Drawable* spot_lights;
+	Spot_Light_Drawable*  spot_lights;
 	Directional_Light_Drawable* directional_lights;
 };
 
@@ -635,36 +797,24 @@ Shader make_lighting_shader()
 	set_int(lighting_shader, "positions", 0);
 	set_int(lighting_shader, "normals"  , 1);
 	set_int(lighting_shader, "albedo"   , 2);
-	
-	// Directional Lighting
-	vec3 light_direction = vec3(-1, -1, -1);
-	set_vec3(lighting_shader, "dir_light.direction", light_direction);
-	set_vec3(lighting_shader, "dir_light.direction", light_direction);
-	set_vec3(lighting_shader, "dir_light.ambient"  , vec3(0.2f, 0.2f, 0.2f));
-	set_vec3(lighting_shader, "dir_light.diffuse"  , vec3(0.5f, 0.5f, 0.5f));
-	set_vec3(lighting_shader, "dir_light.specular" , vec3(1.0f, 1.0f, 1.0f));
-	
-	// Point Lights
-	vec3 light_position = vec3(8, 65, 8);
-	set_vec3 (lighting_shader, "pt_light.position" , light_position);
-	set_vec3 (lighting_shader, "pt_light.ambient"  , vec3(0.2f, 0.2f, 0.2f));
-	set_vec3 (lighting_shader, "pt_light.diffuse"  , vec3(0.5f, 0.5f, 0.5f));
-	set_vec3 (lighting_shader, "pt_light.specular" , vec3(1.0f, 1.0f, 1.0f));
-	set_float(lighting_shader, "pt_light.linear"   , 0.09f);
-	set_float(lighting_shader, "pt_light.quadratic", 0.032f);
-	
-	// Spot Lights
-	float spt_light_cutoff_inner = cos(ToRadians(12.5f));
-	float spt_light_cutoff_outer = cos(ToRadians(17.5f));
-	set_vec3 (lighting_shader, "spt_light.position"    , vec3(2, 1.5, 2));
-	set_vec3 (lighting_shader, "spt_light.direction"   , vec3(2, 1.5, 2));
-	set_float(lighting_shader, "spt_light.inner_cutoff", spt_light_cutoff_inner);
-	set_float(lighting_shader, "spt_light.outer_cutoff", spt_light_cutoff_outer);
-	set_vec3 (lighting_shader, "spt_light.ambient"     , vec3(.001, 0, 0));
-	set_vec3 (lighting_shader, "spt_light.diffuse"     , vec3(1, 0, 0));
-	set_vec3 (lighting_shader, "spt_light.specular"    , vec3(1, 0, 0));
-	set_float(lighting_shader, "spt_light.linear"      , 0.01f);
-	set_float(lighting_shader, "spt_light.quadratic"   , 0.032f);
+
+	vec3 light_positions[4] = {vec3(5.0, .15, 0.0), vec3(-3, 1, 2), vec3(0, 4, 0), vec3(-1,.2,-1) };
+	vec3 light_colors[4]    = {vec3(.905, .568, .113), vec3(1 , 0, 1), vec3(1, 1, 1), vec3(0 , 0, 1) };
+
+	set_vec3(lighting_shader, "light_positions[0]", light_positions[0]);
+	set_vec3(lighting_shader, "light_positions[1]", light_positions[1]);
+	set_vec3(lighting_shader, "light_positions[2]", light_positions[2]);
+	set_vec3(lighting_shader, "light_positions[3]", light_positions[3]);
+
+	set_vec3(lighting_shader, "light_colors[0]", light_colors[0]);
+	set_vec3(lighting_shader, "light_colors[1]", light_colors[1]);
+	set_vec3(lighting_shader, "light_colors[2]", light_colors[2]);
+	set_vec3(lighting_shader, "light_colors[3]", light_colors[3]);
+
+	// meterial properties
+	set_float(lighting_shader, "metallic" , .00);
+	set_float(lighting_shader, "roughness", 1.0);
+	set_float(lighting_shader, "ao"       , .00);
 
 	return lighting_shader;
 }
@@ -854,31 +1004,13 @@ void load(Animation* anim, const char* path)
 	anim->current_frame = 0;
 	anim->timer = 1.f / anim->num_frames;
 }
-void update_animation(Animation* anim, mat4* poses, float dtime)
+void update_animation_pose(Animation* anim, mat4* poses, uint frame_1, uint frame_2, float mix)
 {
-	anim->timer += dtime;
-
-	if (anim->timer > 1 / 24.f)
-	{
-		anim->timer = 0;
-		if (++anim->current_frame > anim->num_frames - 1) anim->current_frame = 0;
-		//out(anim->current_frame);
-	}
-
 	mat4* keyframes = Alloc(mat4, anim->num_bones);
-
-	//for (size_t i = 0; i < 21; i++)
-	//{
-	//	anim->keyframes[5][i] = lerp(anim->keyframes[5][0], anim->keyframes[5][2], 0);
-	//}
-
-	uint frame = anim->current_frame;
-	uint next_frame = frame + 1;
-	if (next_frame >= anim->num_frames) next_frame = 0;
 
 	for (uint i = 0; i < anim->num_bones; i++)
 	{
-		keyframes[i] = lerp(anim->keyframes[i][frame], anim->keyframes[i][next_frame], anim->timer / (1.f / 24));
+		keyframes[i] = lerp(anim->keyframes[i][frame_1], anim->keyframes[i][frame_2], mix);
 	}
 
 	poses[0] = keyframes[0];
@@ -893,4 +1025,109 @@ void update_animation(Animation* anim, mat4* poses, float dtime)
 	}
 
 	free(keyframes);
+}
+void update_animation(Animation* anim, mat4* poses, float dtime)
+{
+	anim->timer += dtime;
+
+	if (anim->timer > 1)
+	{
+		anim->timer = 0;
+		if (++anim->current_frame > anim->num_frames - 1) anim->current_frame = 0;
+		//out(anim->current_frame);
+	}
+
+	mat4* keyframes = Alloc(mat4, anim->num_bones);
+
+	uint frame = anim->current_frame;
+	uint next_frame = frame + 1;
+
+	if (frame >= anim->num_frames)
+	{
+		frame = 0;
+		next_frame = 1;
+	}
+	if (next_frame >= anim->num_frames)
+	{
+		next_frame = 0;
+	}
+
+	//out(frame << ',' << next_frame);
+	//float mix = lerp_spring(0, 1, anim->timer / 1.f, 10, 15);
+	float mix = lerp(0, 1, anim->timer / 1.f);
+	//float mix = bounce(anim->timer / 1.f);
+	update_animation_pose(anim, poses, frame, next_frame, mix);
+
+	free(keyframes);
+}
+
+// camera
+
+#define DIR_FORWARD	0
+#define DIR_BACKWARD	1
+#define DIR_LEFT	2
+#define DIR_RIGHT	3
+
+struct Camera
+{
+	vec3 position;
+	vec3 front, right, up;
+	float yaw, pitch;
+	float trauma;
+};
+
+void camera_update_dir(Camera* camera, float dx, float dy, float dtime, float sensitivity = 0.003)
+{
+	// camera shake
+	float trauma = camera->trauma;
+
+	static uint offset = random_uint() % 16;
+
+	if (camera->trauma > 1) camera->trauma = 1;
+	if (camera->trauma > 0) camera->trauma -= dtime;
+	else
+	{
+		camera->trauma = 0;
+		offset = random_uint() % 16;
+	}
+
+	float p1 = ((perlin((trauma + offset + 0) * 1000) * 2) - 1) * trauma;
+	float p2 = ((perlin((trauma + offset + 1) * 2000) * 2) - 1) * trauma;
+	float p3 = ((perlin((trauma + offset + 2) * 3000) * 2) - 1) * trauma;
+
+	float shake_yaw   = ToRadians(p1);
+	float shake_pitch = ToRadians(p2);
+	float shake_roll  = ToRadians(p3);
+
+	camera->yaw   += (dx * sensitivity) / TWOPI;
+	camera->pitch += (dy * sensitivity) / TWOPI;
+
+	float yaw   = camera->yaw + shake_yaw;
+	float pitch = camera->pitch + shake_pitch;
+
+	// it feels a little different (better?) if we let the shake actually move the camera a little
+	//camera->yaw   += shake_yaw;
+	//camera->pitch += shake_pitch;
+
+	// updating camera direction
+	if (camera->pitch >  PI / 2.01) camera->pitch =  PI / 2.01;
+	if (camera->pitch < -PI / 2.01) camera->pitch = -PI / 2.01;
+
+	camera->front.y = sin(pitch);
+	camera->front.x = cos(pitch) * cos(yaw);
+	camera->front.z = cos(pitch) * sin(yaw);
+
+	camera->front = normalize(camera->front);
+	camera->right = normalize(cross(camera->front, vec3(0, 1, 0)));
+	camera->up    = normalize(cross(camera->right, camera->front));
+
+	mat3 roll = glm::rotate(shake_roll, camera->front);
+	camera->up = roll * camera->up;
+}
+void camera_update_pos(Camera* camera, int direction, float distance)
+{
+	if (direction == DIR_FORWARD ) camera->position += camera->front * distance;
+	if (direction == DIR_LEFT    ) camera->position -= camera->right * distance;
+	if (direction == DIR_RIGHT   ) camera->position += camera->right * distance;
+	if (direction == DIR_BACKWARD) camera->position -= camera->front * distance;
 }

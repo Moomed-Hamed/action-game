@@ -1,5 +1,5 @@
 // Copyright (c) 2021 Mohamed Hamed
-// Intermediary version 3.8.21
+// Intermediary version 30.8.21
 
 #pragma comment(lib, "winmm")
 #pragma comment (lib, "Ws2_32.lib") // networking
@@ -33,6 +33,7 @@
 #define Alloc(type, count) (type *)calloc(count, sizeof(type))
 
 #include <proprietary/mathematics.h> // this is pretty much GLM for now
+using glm::lookAt;
 
 byte* read_text_file_into_memory(const char* path)
 {
@@ -149,6 +150,15 @@ float lerp_sin(float start, float end, float amount)
 {
 	return lerp(start, end, sin(amount * (PI / 2.f)));
 }
+float lerp_spring(float start, float end, float amount, float stiffness = 8, float period = 4)
+{
+	float p = sin(amount * period * PI);
+	float s = exp(amount * stiffness * -1);
+	float spring = p * s;
+
+	float mix = lerp(abs(p) * s, 1.f - (abs(p) * s), amount);
+	return lerp(start, end, mix);
+}
 vec3 lerp(vec3 start, vec3 end, float amount)
 {
 	return (start + amount * (end - start));
@@ -167,46 +177,6 @@ mat4 lerp(mat4 frame_1, mat4 frame_2, float amount)
 
 	vec3 pos = lerp(pos_1, pos_2, amount);
 	quat rot = lerp(rot_1, rot_2, amount);
-
-	mat4 ret = mat4(rot);
-	ret[0][3] = pos.x;
-	ret[1][3] = pos.y;
-	ret[2][3] = pos.z;
-
-	return ret;
-}
-mat4 lerp_sin(mat4 frame_1, mat4 frame_2, float amount)
-{
-	vec3 pos_1 = vec3(frame_1[0][3], frame_1[1][3], frame_1[2][3]);
-	vec3 pos_2 = vec3(frame_2[0][3], frame_2[1][3], frame_2[2][3]);
-
-	quat rot_1 = quat(frame_1);
-	quat rot_2 = quat(frame_2);
-
-	vec3 pos = lerp(pos_1, pos_2, sin(amount * (PI / 2.f)));
-	quat rot = lerp(rot_1, rot_2, sin(amount * (PI / 2.f)));
-
-	mat4 ret = mat4(rot);
-	ret[0][3] = pos.x;
-	ret[1][3] = pos.y;
-	ret[2][3] = pos.z;
-
-	return ret;
-}
-mat4 lerp_spring(mat4 frame_1, mat4 frame_2, float amount)
-{
-	vec3 pos_1 = vec3(frame_1[0][3], frame_1[1][3], frame_1[2][3]);
-	vec3 pos_2 = vec3(frame_2[0][3], frame_2[1][3], frame_2[2][3]);
-
-	quat rot_1 = quat(frame_1);
-	quat rot_2 = quat(frame_2);
-
-	float period    = sin(amount * 8.f * PI);
-	float stiffness = exp(amount * -5);
-	float spring = period * stiffness;
-
-	vec3 pos = lerp(pos_1, pos_2, spring);
-	quat rot = lerp(rot_1, rot_2, spring);
 
 	mat4 ret = mat4(rot);
 	ret[0][3] = pos.x;
@@ -345,4 +315,68 @@ float perlin(float n)
 	//int gradient_2 = noise(x2);
 
 	return lerp(noise_chance(x1), noise_chance(x2), n - (float)x1);
+}
+
+// tweening
+float bezier3(float b, float c, float t) // a = 0 and d = 1
+{
+	float s = 1.f - t;
+	float t2 = t * t;
+	float s2 = s * s;
+	float t3 = t2 * t;
+	return (3.f * b * s2 * t) + (3.f * c * s * t2) + t3;
+
+	// same as this
+	//float l1 = lerp(0, b, t);
+	//float l2 = lerp(b, c, t);
+	//float l3 = lerp(c, 1, t);
+	//
+	//return lerp(lerp(l1, l12, t), lerp(l2, l3, t), t);
+}
+float bezier5(float b, float c, float d, float e, float t) // a = 0 and d = 1
+{
+	// this implementation is not the fastest
+	float a1 = lerp(0, b, t);
+	float a2 = lerp(b, c, t);
+	float a3 = lerp(c, d, t);
+	float a4 = lerp(d, e, t);
+	float a5 = lerp(e, 1, t);
+
+	float b1 = lerp(a1, a2, t);
+	float b2 = lerp(a2, a3, t);
+	float b3 = lerp(a3, a4, t);
+	float b4 = lerp(a4, a5, t);
+
+	float c1 = lerp(b1, b2, t);
+	float c2 = lerp(b2, b3, t);
+	float c3 = lerp(b3, b4, t);
+
+	float d1 = lerp(c1, c2, t);
+	float d2 = lerp(c2, c3, t);
+
+	return lerp(d1, d2, t);
+}
+float bezier7(float b, float c, float d, float e, float f, float g, float t) // a = 0 and d = 1
+{
+	float s = 1.f - t;
+	float s2 = t * t;
+	float s3 = s2 * t;
+	float s4 = s2 * s2;
+	float s5 = s3 * s2;
+	float s6 = s3 * s3;
+
+	float t2 = t  * t;
+	float t3 = t2 * t;
+	float t4 = t2 * t2;
+	float t5 = t3 * t2;
+	float t6 = t3 * t3;
+	float t7 = t3 * t4;
+
+	return (7.f * b * s6 * t) + (21.f * c * s5 * t2) + (35.f * d * s4 * t3) * (35.f * e * s3 * t4) + (21.f * f * s2 * t5) + (7.f * g * s * t6) + t7;
+}
+
+float bounce(float t, float a = -.45, float b = .25, float c = .55, float d = .75)
+{
+	return 1 - abs(bezier5(a, b, c, d, 1 - t));
+	//return 1 - abs(bezier3(-.45, 0, 1 - t));
 }

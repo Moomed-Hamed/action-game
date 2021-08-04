@@ -18,7 +18,7 @@ out VS_OUT vs_out;
 
 void main()
 {
-	vs_out.normal    = normal;
+	vs_out.normal    = rotation * normal;
 	vs_out.frag_pos  = (rotation * position) + world_position;
 	vs_out.tex_coord = tex_coord;
 	gl_Position      = proj_view * vec4(vs_out.frag_pos, 1.0);

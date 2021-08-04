@@ -1,4 +1,4 @@
-#include "level.h"
+#include "player.h"
 
 #define NETWORK_ERROR(err) out("NETWORK ERROR: " << err)
 
@@ -284,7 +284,7 @@ DWORD WINAPI client_proc(LPVOID params)
 }
 DWORD WINAPI server_proc(LPVOID params)
 {
-	Enemy* enemy = (Enemy*)params;
+	Peer* peer = (Peer*)params;
 
 	const char* ip = "192.168.1.2";
 	const char* port = "42069";
@@ -313,9 +313,9 @@ DWORD WINAPI server_proc(LPVOID params)
 				if (server_recieve(server, msg, 255, i) > 0)
 				{
 					//print(" CLIENT %d: %s\n", i, msg);
-					vec3 enemy_position = *((vec3*)msg);
-					printvec(enemy_position);
-					enemy->feet_position = enemy_position;
+					vec3 peer_position = *((vec3*)msg);
+					printvec(peer_position);
+					peer->feet_position = peer_position;
 				}
 			}
 		}

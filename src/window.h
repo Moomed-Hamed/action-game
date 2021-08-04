@@ -69,7 +69,7 @@ struct Mouse
 	double raw_x, raw_y;   // pixel coordinates
 	double norm_x, norm_y; // normalized screen coordinates
 	double dx, dy;  // pos change since last frame in pixels
-	// TODO : add norm_dx & norm_dy?
+	double norm_dx, norm_dy;
 
 	Button right_button, left_button;
 };
@@ -82,6 +82,9 @@ void update_mouse(Mouse* mouse, Window window)
 
 	mouse->dx = mouse->raw_x - prev_mouse.raw_x; // what do these mean again?
 	mouse->dy = prev_mouse.raw_y - mouse->raw_y;
+
+	mouse->norm_dx = mouse->dx / window.screen_width;
+	mouse->norm_dy = mouse->dy / window.screen_height;
 
 	prev_mouse.raw_x = mouse->raw_x;
 	prev_mouse.raw_y = mouse->raw_y;

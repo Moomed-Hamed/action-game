@@ -1,19 +1,28 @@
 # action-game
 
-![showcase](assets/misc/game.gif)
+i'm not sure what this repo will end up being.
+for now, it's just a place where i have fun programming
 
-### About
-Not sure what this going to become, for now it's just more practice
+![showcase](assets/misc/showcase_0.gif)
 
-### Controls
-```
-WASD  - Move
-Mouse - Aim / Fire
-ESC   - Quit Game
-```
+### Animations
+instead of traditional animation, a library of poses is used
+with different interpolation techniques to add impact and fidelity.
 
-### Requirements
-- Graphics card that supports OpenGL 4.1
+![showcase](assets/misc/showcase_1.gif)
+
+### Particle System
+simple but versitile particle system that is capable of basic effects
+like fire, explosions, blood spurts, etc. it supports wind and physics as well.
+
+![showcase](assets/misc/showcase_2.gif)
+
+### Multiplayer
+nothing special here, just a basic multiplayer implementation 
+that sends position & orientation data over tcp every few miliseconds.
+
+![showcase](assets/misc/showcase_3.gif)
 
 ### Credits
-- Programmer : Me
+- programmer : Me
+- art : some assets were purchased form the incredibly talanted folks at syntystudios

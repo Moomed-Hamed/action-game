@@ -213,19 +213,19 @@ void init(Physics_Renderer* renderer)
 {
 	uint reserved_size = sizeof(Collider_Drawable) * MAX_PLANE_COLLIDERS;
 
-	load(&renderer->cube_mesh, "assets/meshes/cube.mesh_uv", "assets/textures/palette.bmp", reserved_size);
+	load(&renderer->cube_mesh, "assets/meshes/basic/cube.mesh_uv", "assets/textures/palette.bmp", reserved_size);
 	mesh_add_attrib_vec3(3, sizeof(Collider_Drawable), 0); // world pos
 	mesh_add_attrib_mat3(4, sizeof(Collider_Drawable), sizeof(vec3)); // transform
 
-	load(&renderer->sphere_mesh, "assets/meshes/sphere.mesh_uv", "assets/textures/palette.bmp", reserved_size);
+	load(&renderer->sphere_mesh, "assets/meshes/basic/sphere.mesh_uv", "assets/textures/palette.bmp", reserved_size);
 	mesh_add_attrib_vec3(3, sizeof(Collider_Drawable), 0); // world pos
 	mesh_add_attrib_mat3(4, sizeof(Collider_Drawable), sizeof(vec3)); // transform
 
-	load(&renderer->cylinder_mesh, "assets/meshes/cylinder.mesh_uv", "assets/textures/palette.bmp", reserved_size);
+	load(&renderer->cylinder_mesh, "assets/meshes/basic/cylinder.mesh_uv", "assets/textures/palette.bmp", reserved_size);
 	mesh_add_attrib_vec3(3, sizeof(Collider_Drawable), 0); // world pos
 	mesh_add_attrib_mat3(4, sizeof(Collider_Drawable), sizeof(vec3)); // transform
 
-	load(&renderer->plane_mesh, "assets/meshes/plane.mesh_uv", "assets/textures/palette.bmp", reserved_size);
+	load(&renderer->plane_mesh, "assets/meshes/basic/plane.mesh_uv", "assets/textures/palette.bmp", reserved_size);
 	mesh_add_attrib_vec3(3, sizeof(Collider_Drawable), 0); // world pos
 	mesh_add_attrib_mat3(4, sizeof(Collider_Drawable), sizeof(vec3)); // transform
 
@@ -312,124 +312,228 @@ void draw(Physics_Renderer* renderer, mat4 proj_view)
 	glEnable(GL_CULL_FACE);
 }
 
-// particle fx
+// particle system
 
-#define MAX_PARTICLES 32
+#define MAX_PARTICLES 128
+#define MAX_PARTICLE_AGE 2
+
+#define PARTICLE_DEBRIS	1
+#define PARTICLE_FIRE	2
+#define PARTICLE_SMOKE	3
+#define PARTICLE_BLOOD	4
+#define PARTICLE_WATER	5
+#define PARTICLE_SPARK	6
+#define PARTICLE_STEAM	7
 
 struct Particle
 {
+	uint type;
 	vec3 position;
 	vec3 velocity;
+	float time_alive;
 };
 
 struct Particle_Emitter
 {
+	float time_to_emit;
 	Particle particles[MAX_PARTICLES];
 };
 
-void init(Particle_Emitter* emitter)
+void emit_cone(Particle_Emitter* emitter, vec3 pos, vec3 dir, uint type, float radius = 1, float speed = 1)
 {
-	for (uint i = 0; i < MAX_PARTICLES; i++)
+	Particle* particles = emitter->particles;
+	dir = normalize(dir);
+
+	for (uint i = 0; i < MAX_PARTICLES; i++) // this is broken
 	{
-		emitter->particles[i].position = vec3(5, 0, 0);
-		emitter->particles[i].velocity = vec3(random_chance_signed(), (.8 * random_chance()) + .2, random_chance_signed());
-		//emitter->particles[i].velocity = vec3(random_chance_signed(), 0, random_chance_signed());
+		if (particles[i].type == NULL)
+		{
+			particles[i].type = type;
+			particles[i].position = pos;
+
+			dir.x += radius * random_chance_signed() * dot(dir, vec3(1, 0, 0));
+			dir.y += radius * random_chance_signed() * dot(dir, vec3(0, 1, 0));
+			dir.z += radius * random_chance_signed() * dot(dir, vec3(0, 0, 1));
+
+			particles[i].velocity = normalize(dir) * speed;
+			particles[i].time_alive = 0;
+			return;
+		}
 	}
 }
-void update(Particle_Emitter* emitter, float dtime)
+void emit_circle(Particle_Emitter* emitter, vec3 pos, uint type, float radius = 1, float speed = 1)
 {
+	Particle* particles = emitter->particles;
+
 	for (uint i = 0; i < MAX_PARTICLES; i++)
 	{
-		emitter->particles[i].position += emitter->particles[i].velocity * dtime;
-		emitter->particles[i].velocity.y += dtime * .001 * random_chance();
+		if (particles[i].type == NULL)
+		{
+			particles[i].type = type;
+			particles[i].position = pos + (radius * vec3(random_chance_signed(), 0, random_chance_signed()));
+			particles[i].velocity = vec3(0, speed, 0);
+			particles[i].time_alive = 0;
+			return;
+		}
+	}
+}
+void emit_sphere(Particle_Emitter* emitter, vec3 pos, uint type, float speed = 1)
+{
+	Particle* particles = emitter->particles;
+
+	for (uint i = 0; i < MAX_PARTICLES; i++)
+	{
+		if (particles[i].type == NULL)
+		{
+			particles[i].type = type;
+			particles[i].position = pos;
+			particles[i].velocity = speed * vec3(random_chance_signed(), random_chance_signed(), random_chance_signed());
+			particles[i].time_alive = 0;
+			return;
+		}
+	}
+}
+
+void spawn_explosion(Particle_Emitter* emitter, vec3 position)
+{
+	for (uint i = 0; i < 16; i++) emit_sphere(emitter, position, PARTICLE_FIRE  , 2);
+	for (uint i = 0; i < 16; i++) emit_sphere(emitter, position, PARTICLE_SPARK , 4);
+	for (uint i = 0; i < 16; i++) emit_sphere(emitter, position, PARTICLE_SMOKE , 1);
+	for (uint i = 0; i <  8; i++) emit_sphere(emitter, position, PARTICLE_DEBRIS, 1);
+}
+void spawn_fire(Particle_Emitter* emitter)
+{
+	emit_circle(emitter, vec3(5, 0, 0), PARTICLE_FIRE , .4);
+	emit_circle(emitter, vec3(5, 0, 0), PARTICLE_FIRE , .4);
+	emit_circle(emitter, vec3(5, 0, 0), PARTICLE_FIRE , .4);
+	//emit_circle(emitter, vec3(5, 1, 0), PARTICLE_SMOKE, .4);
+}
+
+void update(Particle_Emitter* emitter, float dtime, vec3 wind = vec3(0))
+{
+	Particle* particles = emitter->particles;
+
+	for (uint i = 0; i < MAX_PARTICLES; i++)
+	{
+		if (particles[i].type != NULL && particles[i].time_alive < MAX_PARTICLE_AGE)
+		{
+			switch (particles[i].type)
+			{
+			case PARTICLE_SMOKE: // things that rise
+			{
+				particles[i].velocity.y -= GRAVITY * .1 * dtime;
+			} break;
+			case PARTICLE_SPARK :
+			{
+				particles[i].velocity.y += GRAVITY * .3 * dtime;
+			} break;
+			case PARTICLE_DEBRIS:
+			case PARTICLE_BLOOD :
+			{
+				particles[i].velocity.y += GRAVITY * .1 * dtime;
+			} break;
+			}
+
+			particles[i].position += particles[i].velocity * dtime;
+			particles[i].position += wind * dtime;
+			particles[i].time_alive += dtime;
+		}
+		else particles[i] = {};
 	}
 }
 
 // rendering
 
-struct Particle_Drawable
+struct Particle_Drawable // don't forget about billboards
 {
 	vec3 position;
+	vec3 scale;
+	vec3 color;
 	mat3 transform;
 };
 
 struct Particle_Renderer
 {
 	Particle_Drawable particles[MAX_PARTICLES];
-	Drawable_Mesh_UV mesh;
+	Drawable_Mesh cube, plane;
 	Shader shader;
 };
 
 void init(Particle_Renderer* renderer)
 {
-	load(&renderer->mesh, "assets/meshes/billboard.mesh_uv", "assets/textures/palette.bmp", MAX_PARTICLES * sizeof(Particle_Drawable));
-	mesh_add_attrib_vec3(3, sizeof(Particle_Drawable), 0); // world pos
-	mesh_add_attrib_mat3(4, sizeof(Particle_Drawable), sizeof(vec3)); // transform
+	//debris
+	load(&renderer->cube, "assets/meshes/basic/ico.mesh", MAX_PARTICLES * sizeof(Particle_Drawable));
+	mesh_add_attrib_vec3(2, sizeof(Particle_Drawable), 0 * sizeof(vec3)); // position
+	mesh_add_attrib_vec3(3, sizeof(Particle_Drawable), 1 * sizeof(vec3)); // scale
+	mesh_add_attrib_vec3(4, sizeof(Particle_Drawable), 2 * sizeof(vec3)); // color
+	mesh_add_attrib_mat3(5, sizeof(Particle_Drawable), 3 * sizeof(vec3)); // rotation
 
-	load(&(renderer->shader), "assets/shaders/mesh_uv_rot.vert", "assets/shaders/mesh_uv.frag");
+	load(&(renderer->shader), "assets/shaders/particle.vert", "assets/shaders/mesh.frag");
 	bind(renderer->shader);
 	set_int(renderer->shader, "positions", 0);
 	set_int(renderer->shader, "normals"  , 1);
 	set_int(renderer->shader, "albedo"   , 2);
-	set_int(renderer->shader, "texture_sampler", 3);
 }
-void update_renderer(Particle_Renderer* renderer, Particle_Emitter* emitter, vec3 front)
+void update_renderer(Particle_Renderer* renderer, Particle_Emitter* emitter)
 {
 	for (uint i = 0; i < MAX_PARTICLES; i++)
 	{
+		float time = emitter->particles[i].time_alive;
+		float completeness = time / MAX_PARTICLE_AGE;
+
 		renderer->particles[i].position = emitter->particles[i].position;
-		renderer->particles[i].transform = mat3(.2) * point_at(normalize(front), vec3(0, 1, 0));
+
+		switch (emitter->particles[i].type)
+		{
+		case PARTICLE_DEBRIS:
+		{
+			renderer->particles[i].scale = vec3(.08f);
+			renderer->particles[i].color = vec3(.2);
+			mat3 rotation = rotate(noise_chance(.2 * (i + (completeness * 100))), vec3(noise_chance(i), noise_chance(i), noise_chance(i)));
+			renderer->particles[i].transform = rotation;
+		} break;
+		case PARTICLE_FIRE:
+		{
+			renderer->particles[i].scale = vec3(lerp(.08, .02, completeness));
+			renderer->particles[i].color = lerp(vec3(1,1,0), vec3(1,0,0), completeness * 1.5);
+			mat3 rotation = rotate(noise_chance(.2 * (i + (completeness * 100))), vec3(noise_chance(i), noise_chance(i), noise_chance(i)));
+			renderer->particles[i].transform = rotation;
+		} break;
+		case PARTICLE_SPARK:
+		{
+			renderer->particles[i].scale = vec3(lerp(.02, .02, completeness));
+			renderer->particles[i].color = lerp(vec3(1), vec3(1, 1, 0), completeness * .5);
+			mat3 rotation = rotate(noise_chance(.2 * (i + (completeness * 100))), vec3(noise_chance(i), noise_chance(i), noise_chance(i)));
+			renderer->particles[i].transform = rotation;
+		} break;
+		case PARTICLE_SMOKE:
+		{
+			renderer->particles[i].scale = vec3(lerp(.2, .02, completeness));
+			renderer->particles[i].color = lerp(vec3(1), vec3(0), completeness);
+			mat3 rotation = rotate(noise_chance(.02 * (i + (completeness * 1000))), vec3(noise_chance(i), noise_chance(i), noise_chance(i)));
+			renderer->particles[i].transform = rotation;
+		} break;
+		case PARTICLE_BLOOD:
+		{
+			renderer->particles[i].scale = normalize(emitter->particles[i].velocity) * .05f;
+			renderer->particles[i].color = lerp(vec3(0.843, 0.015, 0.015), vec3(.1), completeness);
+			mat3 rotation = rotate(noise_chance(.2 * (i + (completeness * 100))), vec3(noise_chance(i), noise_chance(i), noise_chance(i)));
+			renderer->particles[i].transform = rotation;
+		} break;
+		default:
+		{
+			renderer->particles[i].scale = vec3(0);
+			renderer->particles[i].color = vec3(1);
+			renderer->particles[i].transform = mat3(1);
+		} break;
+		}
 	}
 
-	update(renderer->mesh, sizeof(Particle_Drawable) * MAX_PARTICLES, (byte*)(&renderer->particles));
+	update(renderer->cube, sizeof(Particle_Drawable) * MAX_PARTICLES, (byte*)(&renderer->particles));
 }
 void draw(Particle_Renderer* renderer, mat4 proj_view)
 {
 	bind(renderer->shader);
 	set_mat4(renderer->shader, "proj_view", proj_view);
-
-	bind_texture(renderer->mesh, 3);
-
-	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-	glDisable(GL_CULL_FACE);
-	draw(renderer->mesh, MAX_PARTICLES);
-	glEnable(GL_CULL_FACE);
-	//glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	draw(renderer->cube, MAX_PARTICLES);
 }
-
-/*
-void update_collider(Cube_Collider* collider, float dtime)
-{
-	vec3 pos = vec3(collider->position.x, collider->position.y - (collider->scale.y / 2.f), collider->position.z);
-	float dot_product = glm::dot(vec3(0, 1, 0), pos);
-
-	if (dot_product < 0)
-	{
-		collider->velocity.y = dot_product * -10.f;
-	}
-	else
-	{
-		collider->position.y += GRAVITY * dtime;
-	}
-
-	collider->velocity *= .85f; // damping
-	collider->position += collider->velocity * dtime;
-}
-void update_collider(Cylinder_Collider* collider, float dtime)
-{
-	vec3 pos = vec3(collider->position.x, collider->position.y - (collider->height / 2), collider->position.z);
-	float dot_product = glm::dot(vec3(0, 1, 0), pos);
-
-	if (dot_product < 0)
-	{
-		collider->velocity.y = dot_product * -10.f;
-	}
-	else
-	{
-		collider->position.y += GRAVITY * dtime;
-	}
-
-	collider->velocity *= .85f; // damping
-	collider->position += collider->velocity * dtime;
-}
-*/
