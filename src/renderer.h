@@ -92,6 +92,31 @@ void set_mat4 (Shader shader, const char* name, mat4 value )
 	glUniformMatrix4fv(glGetUniformLocation(shader.id, name), 1, GL_FALSE, (float*)&value);
 }
 
+GLuint load_texture(const char* path)
+{
+	GLuint id = {};
+	int width, height, num_channels;
+	byte* image;
+
+	stbi_set_flip_vertically_on_load(true);
+
+	image = stbi_load(path, &width, &height, &num_channels, 0);
+	if (image == NULL) out("ERROR : '" << path << "' NOT FOUND!");
+
+	glGenTextures(1, &id);
+	glBindTexture(GL_TEXTURE_2D, id);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glGenerateMipmap(GL_TEXTURE_2D);
+
+	stbi_image_free(image);
+
+	return id;
+}
+
 struct Mesh_Data
 {
 	uint num_vertices, num_indices;
@@ -236,7 +261,7 @@ struct Drawable_Mesh
 struct Drawable_Mesh_UV
 {
 	GLuint VAO, VBO, EBO;
-	uint num_indices, texture_id;
+	uint num_indices, texture_id, material_id;
 };
 
 struct Drawable_Mesh_Anim
@@ -248,7 +273,7 @@ struct Drawable_Mesh_Anim
 struct Drawable_Mesh_Anim_UV
 {
 	GLuint VAO, VBO, EBO, UBO;
-	uint num_indices, texture_id;
+	uint num_indices, texture_id, material_id;
 };
 
 void load(Drawable_Mesh* mesh, const char* path, uint reserved_mem_size = 0)
@@ -301,7 +326,7 @@ void draw(Drawable_Mesh mesh, uint num_instances)
 	glDrawElementsInstanced(GL_TRIANGLES, mesh.num_indices, GL_UNSIGNED_INT, 0, num_instances);
 }
 
-void load(Drawable_Mesh_UV* mesh, const char* path, const char* texture_path, uint reserved_mem_size)
+void load(Drawable_Mesh_UV* mesh, const char* path, uint reserved_mem_size)
 {
 	Mesh_Data_UV mesh_data = {};
 	load(&mesh_data, path);
@@ -346,27 +371,6 @@ void load(Drawable_Mesh_UV* mesh, const char* path, const char* texture_path, ui
 		glVertexAttribPointer(tex_attrib, 2, GL_FLOAT, GL_FALSE, sizeof(vec2), (void*)offset);
 		glEnableVertexAttribArray(tex_attrib);
 	}
-
-	if (texture_path)
-	{
-		int width, height, num_channels;
-		byte* image;
-
-		stbi_set_flip_vertically_on_load(true);
-
-		image = stbi_load(texture_path, &width, &height, &num_channels, 0);
-
-		glGenTextures(1, &(mesh->texture_id));
-		glBindTexture(GL_TEXTURE_2D, mesh->texture_id);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glGenerateMipmap(GL_TEXTURE_2D);
-
-		stbi_image_free(image);
-	}
 }
 void update(Drawable_Mesh_UV mesh, uint vb_size, byte* vb_data)
 {
@@ -377,6 +381,9 @@ void bind_texture(Drawable_Mesh_UV mesh, uint texture_unit = 0)
 {
 	glActiveTexture(GL_TEXTURE0 + texture_unit);
 	glBindTexture(GL_TEXTURE_2D, mesh.texture_id);
+
+	glActiveTexture(GL_TEXTURE1 + texture_unit);
+	glBindTexture(GL_TEXTURE_2D, mesh.material_id);
 }
 void draw(Drawable_Mesh_UV mesh, uint num_instances = 1)
 {
@@ -457,7 +464,7 @@ void draw(Drawable_Mesh_Anim mesh, uint num_instances = 1)
 	glDrawElementsInstanced(GL_TRIANGLES, mesh.num_indices, GL_UNSIGNED_INT, 0, num_instances);
 }
 
-void load(Drawable_Mesh_Anim_UV* mesh, const char* path, const char* texture_path, uint reserved_mem_size = 0)
+void load(Drawable_Mesh_Anim_UV* mesh, const char* path, uint reserved_mem_size = 0)
 {
 	Mesh_Data_Anim_UV mesh_data;
 	load(&mesh_data, path);
@@ -522,27 +529,6 @@ void load(Drawable_Mesh_Anim_UV* mesh, const char* path, const char* texture_pat
 
 	//glBindBufferRange(GL_UNIFORM_BUFFER, 0, renderdata->UBO, 0, model_data.num_joints * sizeof(glm::mat4));
 	glBindBufferBase(GL_UNIFORM_BUFFER, 0, mesh->UBO);
-
-	if (texture_path)
-	{
-		int width, height, num_channels;
-		byte* image;
-
-		stbi_set_flip_vertically_on_load(true);
-
-		image = stbi_load(texture_path, &width, &height, &num_channels, 0);
-
-		glGenTextures(1, &(mesh->texture_id));
-		glBindTexture(GL_TEXTURE_2D, mesh->texture_id);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glGenerateMipmap(GL_TEXTURE_2D);
-
-		stbi_image_free(image);
-	}
 }
 void update(Drawable_Mesh_Anim_UV mesh, uint num_bones, mat4* pose, uint vb_size, byte* vb_data)
 {
@@ -556,10 +542,14 @@ void bind_texture(Drawable_Mesh_Anim_UV mesh, uint texture_unit = 0)
 {
 	glActiveTexture(GL_TEXTURE0 + texture_unit);
 	glBindTexture(GL_TEXTURE_2D, mesh.texture_id);
+
+	glActiveTexture(GL_TEXTURE1 + texture_unit);
+	glBindTexture(GL_TEXTURE_2D, mesh.material_id);
 }
 void draw(Drawable_Mesh_Anim_UV mesh, uint num_instances = 1)
 {
 	glBindVertexArray(mesh.VAO);
+	glBindBufferBase(GL_UNIFORM_BUFFER, 1, mesh.UBO); // animations use slot 1
 	glDrawElementsInstanced(GL_TRIANGLES, mesh.num_indices, GL_UNSIGNED_INT, 0, num_instances);
 }
 
@@ -737,50 +727,20 @@ void draw_g_buffer(G_Buffer g_buffer)
 
 struct Point_Light
 {
-	vec3 position;
-	vec3 color;
-	float linear, quadratic;
+	vec3 position, color;
+	float intensity;
 };
 
 struct Spot_Light
 {
-	vec3 position;
-	vec3 direction;
+	vec3 position, direction, color;
 	float inner_cuttof, outer_cuttof;
-	vec3 color;
-	float linear, quadratic;
-};
-
-struct Directional_Light
-{
-	vec3 direction;
-	vec3 color;
-	float linear, quadratic;
-};
-
-struct Point_Light_Drawable
-{
-	Shader shader;
-	Drawable_Mesh mesh;
-};
-
-struct Spot_Light_Drawable
-{
-	Shader shader;
-	Drawable_Mesh mesh;
-};
-
-struct Directional_Light_Drawable
-{
-	Shader shader;
-	Drawable_Mesh mesh;
 };
 
 struct Light_Renderer
 {
-	Point_Light_Drawable* point_lights;
-	Spot_Light_Drawable*  spot_lights;
-	Directional_Light_Drawable* directional_lights;
+	Point_Light* point_lights;
+	Spot_Light*  spot_lights;
 };
 
 void init(Light_Renderer* renderer)
@@ -798,8 +758,10 @@ Shader make_lighting_shader()
 	set_int(lighting_shader, "normals"  , 1);
 	set_int(lighting_shader, "albedo"   , 2);
 
-	vec3 light_positions[4] = {vec3(5.0, .15, 0.0), vec3(-3, 1, 2), vec3(0, 4, 0), vec3(-1,.2,-1) };
-	vec3 light_colors[4]    = {vec3(.905, .568, .113), vec3(1 , 0, 1), vec3(1, 1, 1), vec3(0 , 0, 1) };
+	vec3 fire = vec3(.905, .568, .113);
+
+	vec3 light_positions[4] = {vec3(5.0, .35, 0.0), vec3(6,1,-6), vec3(0, 4, 0), vec3(-1,.2,-1) };
+	vec3 light_colors[4]    = { fire, fire, fire, fire };
 
 	set_vec3(lighting_shader, "light_positions[0]", light_positions[0]);
 	set_vec3(lighting_shader, "light_positions[1]", light_positions[1]);
@@ -810,11 +772,6 @@ Shader make_lighting_shader()
 	set_vec3(lighting_shader, "light_colors[1]", light_colors[1]);
 	set_vec3(lighting_shader, "light_colors[2]", light_colors[2]);
 	set_vec3(lighting_shader, "light_colors[3]", light_colors[3]);
-
-	// meterial properties
-	set_float(lighting_shader, "metallic" , .00);
-	set_float(lighting_shader, "roughness", 1.0);
-	set_float(lighting_shader, "ao"       , .00);
 
 	return lighting_shader;
 }
@@ -1050,11 +1007,13 @@ void update_animation(Animation* anim, mat4* poses, float dtime)
 	if (next_frame >= anim->num_frames)
 	{
 		next_frame = 0;
-	}
+	} //out(frame << ',' << next_frame);
 
-	//out(frame << ',' << next_frame);
+
 	//float mix = lerp_spring(0, 1, anim->timer / 1.f, 10, 15);
-	float mix = lerp(0, 1, anim->timer / 1.f);
+	//float mix = lerp(0, 1, anim->timer / 1.f);
+	//float mix = lerp(0, 1, sin(PI - (anim->timer * PI * .5)));
+	float mix = lerp(0, 1, sin(anim->timer * PI * .5));
 	//float mix = bounce(anim->timer / 1.f);
 	update_animation_pose(anim, poses, frame, next_frame, mix);
 

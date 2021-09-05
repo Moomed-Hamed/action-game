@@ -37,7 +37,7 @@ void update(Bullet* bullets, Enemy* enemies, float dtime)
 
 			for (uint j = 0; j < MAX_ENEMIES; j++)
 			{
-				if (point_in_sphere(bullets[i].position, enemies[j].collider))
+				if (point_in_cylinder(bullets[i].position, enemies[j].collider))
 				{
 					enemies[j].health -= 10;
 					enemies[j].trauma += .25;
@@ -54,8 +54,7 @@ void update(Bullet* bullets, Enemy* enemies, float dtime)
 struct Bullet_Drawable
 {
 	vec3 position;
-	vec3 scale;
-	vec3 color;
+	vec3 scale, color;
 	mat3 transform;
 };
 
@@ -68,17 +67,13 @@ struct Bullet_Renderer
 
 void init(Bullet_Renderer* renderer)
 {
-	load(&renderer->mesh, "assets/meshes/basic/sphere.mesh", MAX_ENEMIES * sizeof(Enemy_Drawable));
-	mesh_add_attrib_vec3(2, sizeof(Enemy_Drawable), 0 * sizeof(vec3)); // position
-	mesh_add_attrib_vec3(3, sizeof(Enemy_Drawable), 1 * sizeof(vec3)); // scale
-	mesh_add_attrib_vec3(4, sizeof(Enemy_Drawable), 2 * sizeof(vec3)); // color
-	mesh_add_attrib_mat3(5, sizeof(Enemy_Drawable), 3 * sizeof(vec3)); // rotation
+	load(&renderer->mesh, "assets/meshes/basic/ico.mesh", sizeof(renderer->bullets));
+	mesh_add_attrib_vec3(2, sizeof(Bullet_Drawable), 0 * sizeof(vec3)); // position
+	mesh_add_attrib_vec3(3, sizeof(Bullet_Drawable), 1 * sizeof(vec3)); // scale
+	mesh_add_attrib_vec3(4, sizeof(Bullet_Drawable), 2 * sizeof(vec3)); // color
+	mesh_add_attrib_mat3(5, sizeof(Bullet_Drawable), 3 * sizeof(vec3)); // rotation
 
-	load(&(renderer->shader), "assets/shaders/particle.vert", "assets/shaders/mesh.frag");
-	bind(renderer->shader);
-	set_int(renderer->shader, "positions", 0);
-	set_int(renderer->shader, "normals"  , 1);
-	set_int(renderer->shader, "albedo"   , 2);
+	load(&(renderer->shader), "assets/shaders/transform/mesh.vert", "assets/shaders/mesh.frag");
 }
 void update_renderer(Bullet_Renderer* renderer, Bullet* bullets)
 {
@@ -86,15 +81,11 @@ void update_renderer(Bullet_Renderer* renderer, Bullet* bullets)
 	{
 		if (bullets[i].type > 0)
 		{
-			renderer->bullets[i].position = bullets[i].position;
+			renderer->bullets[i].position  = bullets[i].position;
 			renderer->bullets[i].transform = mat3(1);
-			renderer->bullets[i].scale = vec3(.01);
-			renderer->bullets[i].color = vec3(0,1,1);
-		}
-		else
-		{
-			renderer->bullets[i] = {};
-		}
+			renderer->bullets[i].scale     = vec3(.01);
+			renderer->bullets[i].color     = vec3(.3);
+		} else renderer->bullets[i] = {};
 	}
 
 	update(renderer->mesh, MAX_BULLETS * sizeof(Bullet_Drawable), (byte*)(&renderer->bullets));
@@ -133,16 +124,14 @@ struct Pickup_Renderer
 
 void init(Pickup_Renderer* renderer)
 {
-	load(&renderer->mesh, "assets/meshes/ammo.mesh_uv", "assets/textures/palette.bmp", MAX_PICKUPS * sizeof(Pickup_Drawable));
+	load(&renderer->mesh, "assets/meshes/ammo.mesh_uv", sizeof(renderer->pickups));
 	mesh_add_attrib_vec3(3, sizeof(Pickup_Drawable), 0); // world pos
 	mesh_add_attrib_mat3(4, sizeof(Pickup_Drawable), sizeof(vec3)); // transform
 
-	load(&(renderer->shader), "assets/shaders/mesh_uv_rot.vert", "assets/shaders/mesh_uv.frag");
-	bind(renderer->shader);
-	set_int(renderer->shader, "positions", 0);
-	set_int(renderer->shader, "normals"  , 1);
-	set_int(renderer->shader, "albedo"   , 2);
-	set_int(renderer->shader, "texture_sampler", 3);
+	renderer->mesh.texture_id  = load_texture("assets/textures/palette.bmp");
+	renderer->mesh.material_id = load_texture("assets/textures/materials.bmp");
+
+	load(&(renderer->shader), "assets/shaders/transform/mesh_uv.vert", "assets/shaders/mesh_uv.frag");
 }
 void update_renderer(Pickup_Renderer* renderer, Pickup* pickups, float dtime)
 {
@@ -164,6 +153,6 @@ void draw(Pickup_Renderer* renderer, mat4 proj_view)
 {
 	bind(renderer->shader);
 	set_mat4(renderer->shader, "proj_view", proj_view);
-	bind_texture(renderer->mesh, 3);
+	bind_texture(renderer->mesh);
 	draw(renderer->mesh, renderer->num_pickups);
 }

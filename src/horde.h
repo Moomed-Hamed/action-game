@@ -1,13 +1,12 @@
 #include "peer.h"
 
-#define MAX_ENEMIES 16
+#define MAX_ENEMIES 5
 
 struct Enemy
 {
 	uint type;
-	Sphere_Collider collider;
-	float health;
-	float trauma;
+	Cylinder_Collider collider;
+	float health, trauma;
 };
 
 void init(Enemy* enemies)
@@ -15,13 +14,13 @@ void init(Enemy* enemies)
 	for (uint i = 0; i < MAX_ENEMIES; i++)
 	{
 		enemies[i].type = 1;
-		enemies[i].health = 100;
+		enemies[i].health = 50;
 		enemies[i].trauma = 0;
 
-		vec3 position = vec3(random_chance_signed(), 1, random_chance_signed()) * 15.f;
-		position.y = 2;
+		vec3 position = vec3(random_chance_signed(), 0, random_chance_signed()) * 5.f;
+		position.y = .5;
 
-		init_collider(&enemies[i].collider, position, vec3(0), vec3(0), 1, .5);
+		init_collider(&enemies[i].collider, position, vec3(0), vec3(0), 1, 1, .5);
 	}
 }
 void update(Enemy* enemies, Orb* orbs, Particle_Emitter* emitter, Camera* cam, float dtime)
@@ -32,9 +31,8 @@ void update(Enemy* enemies, Orb* orbs, Particle_Emitter* emitter, Camera* cam, f
 		{
 			if (enemies[i].health < 0)
 			{
-				for (uint j = 0; j < 8; j++) // spawn some orbs
-					spawn(orbs, enemies[i].collider.position);
-				spawn_explosion(emitter, enemies[i].collider.position);
+				for (uint j = 0; j < 8; j++) spawn(orbs, enemies[i].collider.position);
+				emit_explosion(emitter, enemies[i].collider.position + vec3(0, .25, 0));
 				cam->trauma += .5;
 				enemies[i] = {};
 			}
@@ -50,61 +48,48 @@ void update(Enemy* enemies, Orb* orbs, Particle_Emitter* emitter, Camera* cam, f
 
 // rendering
 
-struct Enemy_Drawable
-{
-	vec3 position;
-	vec3 scale;
-	vec3 color;
-	mat3 transform;
-};
-
 struct Enemy_Renderer
 {
-	Enemy_Drawable enemies[MAX_ENEMIES];
-	Drawable_Mesh mesh;
+	Prop_Drawable enemies[MAX_ENEMIES];
+	Drawable_Mesh_Anim_UV mesh;
 	Shader shader;
+	Animation animation;
+	mat4 current_pose[MAX_ANIMATED_BONES];
 };
 
 void init(Enemy_Renderer* renderer)
 {
-	load(&renderer->mesh, "assets/meshes/basic/sphere.mesh", MAX_ENEMIES * sizeof(Enemy_Drawable));
-	mesh_add_attrib_vec3(2, sizeof(Enemy_Drawable), 0 * sizeof(vec3)); // position
-	mesh_add_attrib_vec3(3, sizeof(Enemy_Drawable), 1 * sizeof(vec3)); // scale
-	mesh_add_attrib_vec3(4, sizeof(Enemy_Drawable), 2 * sizeof(vec3)); // color
-	mesh_add_attrib_mat3(5, sizeof(Enemy_Drawable), 3 * sizeof(vec3)); // rotation
+	load(&renderer->mesh, "assets/meshes/skeleton.mesh_anim", sizeof(renderer->enemies));
+	mesh_add_attrib_vec3(5, sizeof(Prop_Drawable), 0); // world pos
+	mesh_add_attrib_mat3(6, sizeof(Prop_Drawable), sizeof(vec3)); // rotation
 
-	load(&(renderer->shader), "assets/shaders/particle.vert", "assets/shaders/mesh.frag");
-	bind(renderer->shader);
-	set_int(renderer->shader, "positions", 0);
-	set_int(renderer->shader, "normals"  , 1);
-	set_int(renderer->shader, "albedo"   , 2);
+	renderer->mesh.texture_id  = load_texture("assets/textures/palette2.bmp");
+	renderer->mesh.material_id = load_texture("assets/textures/materials.bmp");
+
+	load(&(renderer->shader), "assets/shaders/transform/mesh_anim_uv.vert", "assets/shaders/mesh_uv.frag");
+	load(&renderer->animation, "assets/animations/skeleton.anim"); // animaiton keyframes
 }
-void update_renderer(Enemy_Renderer* renderer, Enemy* enemies)
+void update_renderer(Enemy_Renderer* renderer, Enemy* enemies, float dtime)
 {
 	for (uint i = 0; i < MAX_ENEMIES; i++)
 	{
 		if (enemies[i].type > 0)
 		{
-			float trauma = enemies[i].trauma;
-			uint offset = random_uint() % 16;
-			float o1 = ((perlin((trauma + offset + 0) * 1000) * 2) - 1) * trauma;
-			float o2 = ((perlin((trauma + offset + 1) * 2000) * 2) - 1) * trauma;
-			float o3 = ((perlin((trauma + offset + 2) * 3000) * 2) - 1) * trauma;
-			vec3 pos_offset = vec3(o1, o2, o3) * .05f;
+			vec3 offset = shake(enemies[i].trauma) * .1f;
 
-			renderer->enemies[i].position  = enemies[i].collider.position + pos_offset;
-			renderer->enemies[i].color     = lerp(vec3(0, 1, 0), vec3(1, 0, 0), 1.f - (enemies[i].health / 100));
-			renderer->enemies[i].scale     = vec3(.75);
-			renderer->enemies[i].transform = mat3(1);
-		}
-		else { renderer->enemies[i] = {}; }
+			renderer->enemies[i].position  = enemies[i].collider.position + offset - vec3(0, .5, 0);
+			renderer->enemies[i].transform = mat3(1 + offset.x);
+		} else { renderer->enemies[i] = {}; }
 	}
 
-	update(renderer->mesh, sizeof(Enemy_Drawable) * MAX_ENEMIES, (byte*)(&renderer->enemies));
+	update_animation(&renderer->animation, renderer->current_pose, dtime);
+
+	update(renderer->mesh, renderer->animation.num_bones, renderer->current_pose, sizeof(renderer->enemies), (byte*)(&renderer->enemies));
 }
 void draw(Enemy_Renderer* renderer, mat4 proj_view)
 {
 	bind(renderer->shader);
 	set_mat4(renderer->shader, "proj_view", proj_view);
+	bind_texture(renderer->mesh);
 	draw(renderer->mesh, MAX_ENEMIES);
 }

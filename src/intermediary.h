@@ -1,5 +1,5 @@
 // Copyright (c) 2021 Mohamed Hamed
-// Intermediary version 30.8.21
+// Intermediary version 9.9.21
 
 #pragma comment(lib, "winmm")
 #pragma comment (lib, "Ws2_32.lib") // networking
@@ -111,31 +111,31 @@ typedef ALuint Audio;
 
 Audio load_audio(const char* path)
 {
-	uint format;
-	uint sample_rate;
-	uint size;
-	char* audio_data;
+	uint format, size, sample_rate;
+	byte* audio_data = NULL;
 
-	FILE* file = fopen(path, "rb");
-	fread(&format, sizeof(uint), 1, file);
+	FILE* file = fopen(path, "rb"); // rb = read binary
+	if (file == NULL) { print("ERROR : %s not found\n"); stop;  return 0; }
+
+	fread(&format     , sizeof(uint), 1, file);
 	fread(&sample_rate, sizeof(uint), 1, file);
-	fread(&size, sizeof(uint), 1, file);
-	audio_data = Alloc(char, size);
-	fread(audio_data, sizeof(char), size, file);
+	fread(&size       , sizeof(uint), 1, file);
+
+	audio_data = Alloc(byte, size);
+	fread(audio_data, sizeof(byte), size, file);
 	fclose(file);
 
-	ALuint bufferid = 0;
-	alGenBuffers(1, &bufferid);
-	alBufferData(bufferid, format, audio_data, size, sample_rate);
+	ALuint buffer_id = NULL;
+	alGenBuffers(1, &buffer_id);
+	alBufferData(buffer_id, format, audio_data, size, sample_rate);
 
-	ALuint SourceID;
-	alGenSources(1, &SourceID);
-	alSourcei(SourceID, AL_BUFFER, bufferid);
+	ALuint source_id = NULL;
+	alGenSources(1, &source_id);
+	alSourcei(source_id, AL_BUFFER, buffer_id);
 
 	free(audio_data);
-	return SourceID;
+	return source_id;
 }
-
 void play_audio(Audio source_id)
 {
 	alSourcePlay(source_id);
@@ -315,6 +315,15 @@ float perlin(float n)
 	//int gradient_2 = noise(x2);
 
 	return lerp(noise_chance(x1), noise_chance(x2), n - (float)x1);
+}
+
+vec3 shake(float trauma) // perlin shake
+{
+	uint offset = random_uint() % 64;
+	float o1 = ((perlin((trauma + offset + 0) * 1000) * 2) - 1) * trauma;
+	float o2 = ((perlin((trauma + offset + 1) * 2000) * 2) - 1) * trauma;
+	float o3 = ((perlin((trauma + offset + 2) * 3000) * 2) - 1) * trauma;
+	return vec3(o1, o2, o3);
 }
 
 // tweening

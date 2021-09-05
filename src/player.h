@@ -1,20 +1,30 @@
-#include "guns.h"
+#include "weps.h"
 
 #define FOV ToRadians(45.0f)
 
+#define ITEM_GUN	0
+#define ITEM_SWORD	1
+#define ITEM_POTION	2
+
 struct Player
 {
+	uint item_id; // id of item player is holding
 	Camera eyes;
 	Sphere_Collider feet;
+
+	Flintlock flintlock;
 };
 
 void init(Player* player)
 {
 	init_collider(&player->feet, vec3(0, 1, 0), vec3(0, 0, 0), vec3(0, 0, 0), 1, .25);
+
+	player->flintlock.shoot = load_audio("assets/audio/pistol_shot.audio");
+	player->flintlock.arm   = load_audio("assets/audio/arm.audio");
 }
-void update(Player* player, Keyboard keys, Mouse mouse, float dtime)
+void update(Player* player, Bullet* bullets, Keyboard keys, Mouse mouse, float dtime)
 {
-	// i don't really have any idea why this works but id does so it stays 4 now
+	// i don't really have any idea why this works but it does so it stays 4 now
 
 	Sphere_Collider* feet = &player->feet;
 
@@ -68,9 +78,89 @@ void update(Player* player, Keyboard keys, Mouse mouse, float dtime)
 	player->eyes.position   = player->feet.position;
 	player->eyes.position.y = player->feet.position.y + 1.3f + jump_offset;
 
-	//// weapons
-	//if (mouse.left_button.is_pressed && player->eyes.trauma < .25)
-	//{
-	//	player->eyes.trauma += .1;
-	//}
+	// item selection
+	if (keys.I.is_pressed) player->item_id = ITEM_GUN;
+	if (keys.O.is_pressed) player->item_id = ITEM_SWORD;
+
+	update(&player->flintlock, bullets, &player->eyes, mouse, keys, dtime);
+}
+
+// rendering
+
+struct Player_Renderer
+{
+	uint item_id;
+	Flintlock_Renderer flintlock_renderer;
+	Drawable_Mesh_UV sword;
+	Drawable_Mesh_UV potion;
+
+	Shader mesh_uv, mesh_anim;
+};
+
+void init(Player_Renderer* renderer)
+{
+	load(&(renderer->mesh_uv), "assets/shaders/transform/mesh_uv.vert", "assets/shaders/mesh_uv.frag");
+
+	load(&renderer->sword, "assets/meshes/sword.mesh_uv", sizeof(Prop_Drawable));
+	mesh_add_attrib_vec3(3, sizeof(Prop_Drawable), 0); // world pos
+	mesh_add_attrib_mat3(4, sizeof(Prop_Drawable), sizeof(vec3)); // transform
+	renderer->sword.texture_id  = load_texture("assets/textures/palette2.bmp");
+	renderer->sword.material_id = load_texture("assets/textures/materials.bmp");
+
+	init(&renderer->flintlock_renderer);
+}
+void update_renderer(Player_Renderer* renderer, Player player, Mouse mouse, float dtime)
+{
+	renderer->item_id = player.item_id;
+
+	vec3 position = player.eyes.position;
+	vec3 front    = player.eyes.front;
+	vec3 right    = player.eyes.right;
+	vec3 up       = player.eyes.up;
+
+	Prop_Drawable drawable = {};
+	drawable.position  = position + (front * 0.9f) + (up * -.0f) + (right * .0f);
+	drawable.transform = point_at(front, up);
+
+	static float turn_amount = 0; turn_amount += mouse.norm_dx;
+	if (turn_amount >  .1) turn_amount = .1;
+	if (turn_amount < -.1) turn_amount = -.1;
+
+	vec3 look = lerp(front * -1.f, right, -1 * (-.05 + turn_amount)); turn_amount *= dtime;
+
+	switch (player.item_id)
+	{
+		case ITEM_GUN: {
+			update_renderer(&renderer->flintlock_renderer, player.flintlock, dtime, player.eyes, mouse.norm_dx);
+			return;
+		} break;
+
+		case ITEM_SWORD: {
+			drawable.position = position + front + (up * -.4f) + (right * .4f);
+			drawable.transform = point_at(look, up) * mat3(rotate(PI / 2, vec3(0, 1, 0)));
+			update(renderer->sword, sizeof(Prop_Drawable), (byte*)(&drawable));
+		}
+
+		default: {
+			update(renderer->sword, sizeof(Prop_Drawable), (byte*)(&drawable));
+		} break;
+	}
+
+	
+}
+void draw(Player_Renderer* renderer, mat4 proj_view)
+{
+	switch (renderer->item_id)
+	{
+		case ITEM_GUN: {
+			draw(renderer->flintlock_renderer, proj_view);
+		} break;
+
+		default: {
+			bind(renderer->mesh_uv);
+			bind_texture(renderer->sword);
+			set_mat4(renderer->mesh_uv, "proj_view", proj_view);
+			draw(renderer->sword);
+		} break;
+	}
 }

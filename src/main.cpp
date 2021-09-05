@@ -14,12 +14,22 @@ int main()
 	//init_window(&window, 2560, 1440, "action game");
 	init_keyboard(&keys);
 
+	Props* props = Alloc(Props, 1);
+	init(props);
+	Prop_Renderer* prop_renderer = Alloc(Prop_Renderer, 1);
+	init(prop_renderer);
+
+	Sea_Renderer* sea_renderer = Alloc(Sea_Renderer, 1);
+	init(sea_renderer);
+
 	Bullet* bullets = Alloc(Bullet, MAX_BULLETS);
 	Bullet_Renderer* bullet_renderer = Alloc(Bullet_Renderer, 1);
 	init(bullet_renderer);
 
 	Player* player = Alloc(Player, 1);
 	init(player);
+	Player_Renderer* player_renderer = Alloc(Player_Renderer, 1);
+	init(player_renderer);
 
 	Peer* peer = Alloc(Peer, 1);
 	init(peer);
@@ -38,11 +48,6 @@ int main()
 	Particle_Emitter* emitter = Alloc(Particle_Emitter, 1);
 	Particle_Renderer* particle_renderer = Alloc(Particle_Renderer, 1);
 	init(particle_renderer);
-
-	Gun gun = {};
-	gun.shoot = load_audio("assets/audio/pistol_shot.audio");
-	Gun_Renderer* gun_renderer = Alloc(Gun_Renderer, 1);
-	init(gun_renderer);
 
 	Orb* orbs = Alloc(Orb, MAX_ORBS);
 	Orb_Renderer* orb_renderer = Alloc(Orb_Renderer, 1);
@@ -73,7 +78,7 @@ int main()
 
 	// frame timer
 	float frame_time = 1.f / 60;
-	int64 target_frame_milliseconds = frame_time * 1000.f;
+	int64 target_frame_milliseconds = frame_time * 1000.f; // seconds * 1000 = milliseconds
 	Timestamp frame_start = get_timestamp(), frame_end;
 
 	// networking
@@ -91,35 +96,15 @@ int main()
 
 		if (keys.ESC.is_pressed) break;
 
-		if (keys.U.is_pressed) {
-			static float metal = 0.0;
-			metal += frame_time;
-			if (metal > 1) metal = 0;
-			set_float(lighting_shader, "metallic", metal);
-		}
-		if (keys.I.is_pressed) {
-			static float metal = 0.0;
-			metal += frame_time;
-			if (metal > 1) metal = 0;
-			set_float(lighting_shader, "roughness", metal);
-		}
-		if (keys.O.is_pressed) {
-			static float metal = 0.0;
-			metal += frame_time;
-			if (metal > 1) metal = 0;
-			set_float(lighting_shader, "ao", metal);
-		}
-
 		if (keys.G.is_pressed) player->eyes.trauma = 1;
 		if (keys.G.is_pressed && !keys.G.was_pressed) play_audio(headshot);
 
 		static float a = 0; a += frame_time;
-		if (a > .2) { a = 0; spawn_fire(emitter); }
+		if (a > .2) { a = 0; emit_fire(emitter); }
 
 		// game updates
-		update(player , keys, mouse, frame_time);
+		update(player , bullets, keys, mouse, frame_time); peer->look_direction = player->eyes.front;
 		update(orbs   , player->eyes.position, frame_time, orb);
-		update(&gun   , bullets, &player->eyes, mouse, keys, frame_time);
 		update(emitter, frame_time, vec3(0));
 		update(bullets, enemies, frame_time);
 		update(enemies, orbs, emitter, &player->eyes, frame_time);
@@ -131,10 +116,12 @@ int main()
 		update_renderer(peer_renderer    , *peer, frame_time);
 		update_renderer(orb_renderer     , orbs);
 		update_renderer(pickup_renderer  , pickups, frame_time);
-		update_renderer(gun_renderer     , gun, frame_time, player->eyes, mouse.norm_dx);
 		update_renderer(bullet_renderer  , bullets);
-		update_renderer(enemy_renderer   , enemies);
+		update_renderer(enemy_renderer   , enemies, frame_time);
 		update_renderer(tile_renderer);
+		update_renderer(sea_renderer, player->eyes.position);
+		update_renderer(player_renderer, *player, mouse, frame_time);
+		update_renderer(prop_renderer, props);
 
 		// Geometry pass
 		glBindFramebuffer(GL_FRAMEBUFFER, g_buffer.FBO);
@@ -146,11 +133,13 @@ int main()
 		draw(tile_renderer     , proj_view);
 		draw(physics_renderer  , proj_view);
 		draw(peer_renderer     , proj_view);
-		//draw(orb_renderer      , proj_view);
+		draw(orb_renderer      , proj_view);
 		draw(pickup_renderer   , proj_view);
-		draw(gun_renderer      , proj_view);
 		draw(bullet_renderer   , proj_view);
 		draw(enemy_renderer    , proj_view);
+		draw(player_renderer   , proj_view);
+		draw(prop_renderer     , proj_view);
+		draw(sea_renderer      , proj_view, frame_time);
 
 		// Lighting pass
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);

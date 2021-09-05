@@ -4,7 +4,7 @@ struct VS_OUT
 {
 	vec3 normal;   // normal vector
 	vec3 frag_pos; // position of this pixel in world space
-	vec2 tex_coords;
+	vec2 tex_coord;
 };
 
 layout (location = 0) in vec3 position;
@@ -19,7 +19,7 @@ void main()
 {
 	vs_out.normal     = normal;
 	vs_out.frag_pos   = position;
-	vs_out.tex_coords = tex_coords;
+	vs_out.tex_coord  = tex_coords;
 
 	gl_Position = proj_view * vec4(vs_out.frag_pos, 1.0);
 }

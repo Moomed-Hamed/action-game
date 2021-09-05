@@ -17,7 +17,7 @@ layout (location = 4) in vec2 tex_coord;
 layout (location = 5) in vec3 world_position;
 layout (location = 6) in mat3 rotation;
 
-layout (std140) uniform skeleton
+layout (binding = 1, std140) uniform skeleton
 {
 	uniform mat4 joint_transforms[MAX_JOINTS];
 };

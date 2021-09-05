@@ -1,7 +1,4 @@
-# action-game
-
-i'm not sure what this repo will end up being.
-for now, it's just a place where i have fun programming
+# pirate-game [WIP]
 
 ![showcase](assets/misc/showcase_0.gif)
 
@@ -23,6 +20,7 @@ that sends position & orientation data over tcp every few miliseconds.
 
 ![showcase](assets/misc/showcase_3.gif)
 
-### Credits
-- programmer : Me
-- art : some assets were purchased form the incredibly talanted folks at syntystudios
+### Credits & Extras
+- programming : Me
+- art : some assets were purchased form the incredibly talanted folks at Synty Studios
+- more info about how this project came to be can be read in the journal

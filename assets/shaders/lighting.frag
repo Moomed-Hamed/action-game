@@ -1,4 +1,4 @@
-#version 330 core
+#version 420 core
 
 struct VS_OUT
 {
@@ -9,15 +9,11 @@ struct VS_OUT
 in VS_OUT vs_out;
 
 // these come from the g_buffer
-uniform sampler2D positions;
-uniform sampler2D normals;
-uniform sampler2D albedo;
+layout (binding = 0) uniform sampler2D positions;
+layout (binding = 1) uniform sampler2D normals;
+layout (binding = 2) uniform sampler2D albedo;
 
 layout (location = 0) out vec4 frag_color;
-
-uniform float metallic;
-uniform float roughness;
-uniform float ao;
 
 // lights
 uniform vec3 light_positions[4];
@@ -32,6 +28,10 @@ vec3  fresnel_schlick(float cosTheta, vec3 F0);
 
 void main()
 {
+	float  metallic  = texture(positions, vs_out.tex_coords).w;
+	float  roughness = texture(normals  , vs_out.tex_coords).w;
+	float  ao        = texture(albedo   , vs_out.tex_coords).w;
+
 	vec3  position  = texture(positions, vs_out.tex_coords).rgb;
 	vec3  normal    = texture(normals  , vs_out.tex_coords).rgb;
 	vec3  albedo    = texture(albedo   , vs_out.tex_coords).rgb;
@@ -49,7 +49,7 @@ void main()
 	// directional light
 	{
 		vec3 light_dir = normalize(vec3(-1));
-		vec3 light_color = vec3(1, 0.749, 0.666);
+		vec3 light_color = vec3(1, 0.749, 0.669);
 
 		// per-light radiance
 		vec3 L = normalize(light_dir * -1);
@@ -79,7 +79,8 @@ void main()
 		vec3 L = normalize(light_positions[i] - position); // world_pos -> light source
 		vec3 H = normalize(V + L);
 		float distance = length(light_positions[i] - position);
-		float attenuation = 1.0 / (distance * distance);
+		float attenuation = (1 / distance) + 1.0 / (distance * distance);
+		//float attenuation = 1.0 / (distance * distance);
 		vec3 radiance = light_colors[i] * attenuation;
 	
 		float n_dot_v = max(dot(N, V), 0.0000001); // prevent divide by 0

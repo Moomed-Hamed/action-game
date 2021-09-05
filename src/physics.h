@@ -213,28 +213,36 @@ void init(Physics_Renderer* renderer)
 {
 	uint reserved_size = sizeof(Collider_Drawable) * MAX_PLANE_COLLIDERS;
 
-	load(&renderer->cube_mesh, "assets/meshes/basic/cube.mesh_uv", "assets/textures/palette.bmp", reserved_size);
+	load(&renderer->cube_mesh, "assets/meshes/basic/cube.mesh_uv", reserved_size);
 	mesh_add_attrib_vec3(3, sizeof(Collider_Drawable), 0); // world pos
 	mesh_add_attrib_mat3(4, sizeof(Collider_Drawable), sizeof(vec3)); // transform
 
-	load(&renderer->sphere_mesh, "assets/meshes/basic/sphere.mesh_uv", "assets/textures/palette.bmp", reserved_size);
+	load(&renderer->sphere_mesh, "assets/meshes/basic/sphere.mesh_uv", reserved_size);
 	mesh_add_attrib_vec3(3, sizeof(Collider_Drawable), 0); // world pos
 	mesh_add_attrib_mat3(4, sizeof(Collider_Drawable), sizeof(vec3)); // transform
 
-	load(&renderer->cylinder_mesh, "assets/meshes/basic/cylinder.mesh_uv", "assets/textures/palette.bmp", reserved_size);
+	load(&renderer->cylinder_mesh, "assets/meshes/basic/cylinder.mesh_uv", reserved_size);
 	mesh_add_attrib_vec3(3, sizeof(Collider_Drawable), 0); // world pos
 	mesh_add_attrib_mat3(4, sizeof(Collider_Drawable), sizeof(vec3)); // transform
 
-	load(&renderer->plane_mesh, "assets/meshes/basic/plane.mesh_uv", "assets/textures/palette.bmp", reserved_size);
+	load(&renderer->plane_mesh, "assets/meshes/basic/plane.mesh_uv", reserved_size);
 	mesh_add_attrib_vec3(3, sizeof(Collider_Drawable), 0); // world pos
 	mesh_add_attrib_mat3(4, sizeof(Collider_Drawable), sizeof(vec3)); // transform
 
-	load(&(renderer->shader), "assets/shaders/mesh_uv_rot.vert", "assets/shaders/mesh_uv.frag");
-	bind(renderer->shader);
-	set_int(renderer->shader, "positions", 0);
-	set_int(renderer->shader, "normals"  , 1);
-	set_int(renderer->shader, "albedo"   , 2);
-	set_int(renderer->shader, "texture_sampler", 3);
+	GLuint texture  = load_texture("assets/textures/palette.bmp");
+	GLuint material = load_texture("assets/textures/materials.bmp");
+
+	renderer->cube_mesh.texture_id     = texture;
+	renderer->sphere_mesh.texture_id   = texture;
+	renderer->cylinder_mesh.texture_id = texture;
+	renderer->plane_mesh.texture_id    = texture;
+
+	renderer->cube_mesh.material_id     = material;
+	renderer->sphere_mesh.material_id   = material;
+	renderer->cylinder_mesh.material_id = material;
+	renderer->plane_mesh.material_id    = material;
+
+	load(&(renderer->shader), "assets/shaders/transform/mesh_uv.vert", "assets/shaders/mesh_uv.frag");
 }
 void update_renderer(Physics_Renderer* renderer, Physics_Colliders* colliders)
 {
@@ -297,10 +305,10 @@ void draw(Physics_Renderer* renderer, mat4 proj_view)
 	bind(renderer->shader);
 	set_mat4(renderer->shader, "proj_view", proj_view);
 
-	bind_texture(renderer->cube_mesh    , 3);
-	bind_texture(renderer->plane_mesh   , 3);
-	bind_texture(renderer->sphere_mesh  , 3);
-	bind_texture(renderer->cylinder_mesh, 3);
+	bind_texture(renderer->cube_mesh    );
+	bind_texture(renderer->plane_mesh   );
+	bind_texture(renderer->sphere_mesh  );
+	bind_texture(renderer->cylinder_mesh);
 
 	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	//glDisable(GL_CULL_FACE);
@@ -324,6 +332,7 @@ void draw(Physics_Renderer* renderer, mat4 proj_view)
 #define PARTICLE_WATER	5
 #define PARTICLE_SPARK	6
 #define PARTICLE_STEAM	7
+#define PARTICLE_BONES	8
 
 struct Particle
 {
@@ -335,7 +344,6 @@ struct Particle
 
 struct Particle_Emitter
 {
-	float time_to_emit;
 	Particle particles[MAX_PARTICLES];
 };
 
@@ -361,7 +369,7 @@ void emit_cone(Particle_Emitter* emitter, vec3 pos, vec3 dir, uint type, float r
 		}
 	}
 }
-void emit_circle(Particle_Emitter* emitter, vec3 pos, uint type, float radius = 1, float speed = 1)
+void emit_circle(Particle_Emitter* emitter, vec3 pos, uint type, float radius = .5, float speed = 1)
 {
 	Particle* particles = emitter->particles;
 
@@ -394,19 +402,18 @@ void emit_sphere(Particle_Emitter* emitter, vec3 pos, uint type, float speed = 1
 	}
 }
 
-void spawn_explosion(Particle_Emitter* emitter, vec3 position)
+void emit_explosion(Particle_Emitter* emitter, vec3 position)
 {
 	for (uint i = 0; i < 16; i++) emit_sphere(emitter, position, PARTICLE_FIRE  , 2);
 	for (uint i = 0; i < 16; i++) emit_sphere(emitter, position, PARTICLE_SPARK , 4);
 	for (uint i = 0; i < 16; i++) emit_sphere(emitter, position, PARTICLE_SMOKE , 1);
 	for (uint i = 0; i <  8; i++) emit_sphere(emitter, position, PARTICLE_DEBRIS, 1);
 }
-void spawn_fire(Particle_Emitter* emitter)
+void emit_fire(Particle_Emitter* emitter)
 {
-	emit_circle(emitter, vec3(5, 0, 0), PARTICLE_FIRE , .4);
-	emit_circle(emitter, vec3(5, 0, 0), PARTICLE_FIRE , .4);
-	emit_circle(emitter, vec3(5, 0, 0), PARTICLE_FIRE , .4);
-	//emit_circle(emitter, vec3(5, 1, 0), PARTICLE_SMOKE, .4);
+	uint num = (random_uint() % 3) + 1;
+	for (uint i = 0; i < num; i++) { emit_circle(emitter, vec3(5, 0, 0), PARTICLE_FIRE, .2); }
+	//emit_circle(emitter, vec3(5, 1, 0), PARTICLE_SMOKE, .2);
 }
 
 void update(Particle_Emitter* emitter, float dtime, vec3 wind = vec3(0))
@@ -468,11 +475,7 @@ void init(Particle_Renderer* renderer)
 	mesh_add_attrib_vec3(4, sizeof(Particle_Drawable), 2 * sizeof(vec3)); // color
 	mesh_add_attrib_mat3(5, sizeof(Particle_Drawable), 3 * sizeof(vec3)); // rotation
 
-	load(&(renderer->shader), "assets/shaders/particle.vert", "assets/shaders/mesh.frag");
-	bind(renderer->shader);
-	set_int(renderer->shader, "positions", 0);
-	set_int(renderer->shader, "normals"  , 1);
-	set_int(renderer->shader, "albedo"   , 2);
+	load(&(renderer->shader), "assets/shaders/transform/mesh.vert", "assets/shaders/mesh.frag");
 }
 void update_renderer(Particle_Renderer* renderer, Particle_Emitter* emitter)
 {
