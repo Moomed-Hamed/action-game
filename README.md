@@ -14,11 +14,17 @@ like fire, explosions, blood spurts, etc. it supports wind and physics as well.
 
 ![showcase](assets/misc/showcase_2.gif)
 
-### Multiplayer
-nothing special here, just a basic multiplayer implementation 
-that sends position & orientation data over tcp every few miliseconds.
+### Water
+ocean water waves are generated with fast fourier transforms. i still have alot
+of learning to do in this area, so it looks a little rough at the moment.
 
 ![showcase](assets/misc/showcase_3.gif)
+
+### Multiplayer
+nothing special here, just a basic multiplayer implementation 
+that sends position data over tcp every few miliseconds.
+
+![showcase](assets/misc/showcase_4.jpg)
 
 ### Credits & Extras
 - programming : Me

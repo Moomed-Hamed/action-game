@@ -106,8 +106,8 @@ GLuint load_texture(const char* path)
 	glGenTextures(1, &id);
 	glBindTexture(GL_TEXTURE_2D, id);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glGenerateMipmap(GL_TEXTURE_2D);
@@ -753,10 +753,6 @@ Shader make_lighting_shader()
 	Shader lighting_shader = {};
 	load(&lighting_shader, "assets/shaders/lighting.vert", "assets/shaders/lighting.frag");
 	bind(lighting_shader);
-
-	set_int(lighting_shader, "positions", 0);
-	set_int(lighting_shader, "normals"  , 1);
-	set_int(lighting_shader, "albedo"   , 2);
 
 	vec3 fire = vec3(.905, .568, .113);
 

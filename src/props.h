@@ -1,37 +1,165 @@
 #include "physics.h"
 
-#define MAX_WALLS  8
+// prop renderer
 
-struct Floor_Tile
+#define MAX_PROPS 8 // max number of props of a given kind
+#define NUM_PROP_TYPES 7
+
+#define PROP_STATIC 1
+#define PROP_DESTRUCTIBLE 2
+
+struct Prop
 {
-	Plane_Collider collider;
+	uint type;
+	vec3 position;
+	mat3 transform;
 };
+
+struct Props
+{
+	union
+	{
+		Prop props[MAX_PROPS * NUM_PROP_TYPES];
+
+		struct
+		{
+			Prop trees[MAX_PROPS];
+			Prop crates[MAX_PROPS];
+			Prop barrels[MAX_PROPS];
+			Prop campfires[MAX_PROPS];
+			Prop grass_1[MAX_PROPS];
+			Prop grass_2[MAX_PROPS];
+			Prop grass_3[MAX_PROPS];
+		};
+	};
+};
+
+void init(Props* props)
+{
+	props->trees[0].type = PROP_STATIC;
+	props->trees[0].position  = vec3(5, 0, -5);
+	props->trees[0].transform = mat3(.5);
+
+	props->campfires[0].type = PROP_STATIC;
+	props->campfires[0].position  = vec3(5, 0, 0);
+	props->campfires[0].transform = mat3(1);
+
+	props->crates[0].type = PROP_STATIC;
+	props->crates[0].position  = vec3(-5, 0, 0);
+	props->crates[0].transform = mat3(1);
+
+	props->barrels[0].type = PROP_STATIC;
+	props->barrels[0].position  = vec3(-2, 0, 6);
+	props->barrels[0].transform = mat3(1);
+
+	props->grass_1[0].type = PROP_STATIC;
+	props->grass_1[0].position = vec3(2, 0, 6);
+	props->grass_1[0].transform = mat3(1);
+}
+void update(Props* props)
+{
+
+}
 
 // rendering
 
-struct Floor_Tile_Drawable
+struct Prop_Drawable
 {
 	vec3 position;
-	mat3 rotation;
+	mat3 transform;
 };
+
+struct Prop_Renderer
+{
+	Prop_Drawable props[MAX_PROPS];
+	GLuint texture_id, material_id;
+	Drawable_Mesh_UV meshes[NUM_PROP_TYPES];
+	Shader shader;
+};
+
+void init(Prop_Renderer* renderer)
+{
+	load(&(renderer->shader), "assets/shaders/transform/mesh_uv.vert", "assets/shaders/mesh_uv.frag");
+
+	renderer->texture_id  = load_texture("assets/textures/palette2.bmp");
+	renderer->material_id = load_texture("assets/textures/materials.bmp");
+
+	load(&renderer->meshes[0], "assets/meshes/env/palm_tree.mesh_uv", MAX_PROPS * sizeof(Prop_Drawable));
+	mesh_add_attrib_vec3(3, sizeof(Prop_Drawable), 0 * sizeof(vec3)); // position
+	mesh_add_attrib_mat3(4, sizeof(Prop_Drawable), 1 * sizeof(vec3)); // color
+
+	load(&renderer->meshes[1], "assets/meshes/props/crate.mesh_uv", MAX_PROPS * sizeof(Prop_Drawable));
+	mesh_add_attrib_vec3(3, sizeof(Prop_Drawable), 0 * sizeof(vec3)); // position
+	mesh_add_attrib_mat3(4, sizeof(Prop_Drawable), 1 * sizeof(vec3)); // color
+
+	load(&renderer->meshes[2], "assets/meshes/props/barrel.mesh_uv", MAX_PROPS * sizeof(Prop_Drawable));
+	mesh_add_attrib_vec3(3, sizeof(Prop_Drawable), 0 * sizeof(vec3)); // position
+	mesh_add_attrib_mat3(4, sizeof(Prop_Drawable), 1 * sizeof(vec3)); // color
+
+	load(&renderer->meshes[3], "assets/meshes/props/campfire.mesh_uv", MAX_PROPS * sizeof(Prop_Drawable));
+	mesh_add_attrib_vec3(3, sizeof(Prop_Drawable), 0 * sizeof(vec3)); // position
+	mesh_add_attrib_mat3(4, sizeof(Prop_Drawable), 1 * sizeof(vec3)); // color
+
+	load(&renderer->meshes[4], "assets/meshes/env/grass_1.mesh_uv", MAX_PROPS * sizeof(Prop_Drawable));
+	mesh_add_attrib_vec3(3, sizeof(Prop_Drawable), 0 * sizeof(vec3)); // position
+	mesh_add_attrib_mat3(4, sizeof(Prop_Drawable), 1 * sizeof(vec3)); // color
+
+	load(&renderer->meshes[5], "assets/meshes/env/grass_2.mesh_uv", MAX_PROPS * sizeof(Prop_Drawable));
+	mesh_add_attrib_vec3(3, sizeof(Prop_Drawable), 0 * sizeof(vec3)); // position
+	mesh_add_attrib_mat3(4, sizeof(Prop_Drawable), 1 * sizeof(vec3)); // color
+
+	load(&renderer->meshes[6], "assets/meshes/env/grass_3.mesh_uv", MAX_PROPS * sizeof(Prop_Drawable));
+	mesh_add_attrib_vec3(3, sizeof(Prop_Drawable), 0 * sizeof(vec3)); // position
+	mesh_add_attrib_mat3(4, sizeof(Prop_Drawable), 1 * sizeof(vec3)); // color
+}
+void update_renderer(Prop_Renderer* renderer, Props* props)
+{
+	for (uint i = 0; i < NUM_PROP_TYPES; i++)
+	{
+		for (uint j = 0; j < MAX_PROPS; j++)
+		{
+			uint index = (i * MAX_PROPS) + j;
+			if (props->props[index].type > 0)
+			{
+				renderer->props[j].position  = props->props[index].position;
+				renderer->props[j].transform = props->props[index].transform;
+			} else renderer->props[j] = {};
+		}
+
+		update(renderer->meshes[i], sizeof(renderer->props), (byte*)renderer->props);
+	}
+}
+void draw(Prop_Renderer* renderer, mat4 proj_view)
+{
+	bind(renderer->shader);
+	set_mat4(renderer->shader, "proj_view", proj_view);
+
+	glActiveTexture(GL_TEXTURE0); glBindTexture(GL_TEXTURE_2D, renderer->texture_id);
+	glActiveTexture(GL_TEXTURE1); glBindTexture(GL_TEXTURE_2D, renderer->material_id);
+
+	for (uint i = 0; i < NUM_PROP_TYPES; i++)
+	{
+		draw(renderer->meshes[i], MAX_PROPS);
+	}
+}
+
+// sky &island
 
 struct Tile_Renderer
 {
-	Floor_Tile_Drawable floors[1];
-
 	Drawable_Mesh_UV floor_mesh, sky_mesh;
 	Shader shader;
 };
 
 void init(Tile_Renderer* renderer)
 {
-	load(&renderer->floor_mesh, "assets/meshes/ground.mesh_uv", sizeof(Floor_Tile_Drawable));
-	mesh_add_attrib_vec3(3, sizeof(Floor_Tile_Drawable), 0); // world pos
-	mesh_add_attrib_mat3(4, sizeof(Floor_Tile_Drawable), sizeof(vec3)); // rotation
+	load(&renderer->floor_mesh, "assets/meshes/env/ground.mesh_uv", sizeof(Prop_Drawable));
+	mesh_add_attrib_vec3(3, sizeof(Prop_Drawable), 0); // world pos
+	mesh_add_attrib_mat3(4, sizeof(Prop_Drawable), sizeof(vec3)); // rotation
 
-	load(&renderer->sky_mesh, "assets/meshes/sky.mesh_uv", sizeof(Floor_Tile_Drawable));
-	mesh_add_attrib_vec3(3, sizeof(Floor_Tile_Drawable), 0); // world pos
-	mesh_add_attrib_mat3(4, sizeof(Floor_Tile_Drawable), sizeof(vec3)); // rotation
+	load(&renderer->sky_mesh, "assets/meshes/env/sky.mesh_uv", sizeof(Prop_Drawable));
+	mesh_add_attrib_vec3(3, sizeof(Prop_Drawable), 0); // world pos
+	mesh_add_attrib_mat3(4, sizeof(Prop_Drawable), sizeof(vec3)); // rotation
 
 	GLuint texture  = load_texture("assets/textures/palette2.bmp");
 	GLuint material = load_texture("assets/textures/materials.bmp");
@@ -42,17 +170,17 @@ void init(Tile_Renderer* renderer)
 	renderer->floor_mesh.material_id = material;
 	renderer->sky_mesh.material_id   = material;
 
-	load(&(renderer->shader), "assets/shaders/transform/mesh_uv.vert", "assets/shaders/mesh_uv.frag");
+	load(&renderer->shader, "assets/shaders/transform/mesh_uv.vert", "assets/shaders/mesh_uv.frag");
 }
 void update_renderer(Tile_Renderer* renderer)
 {
-	Floor_Tile_Drawable tile = {};
+	Prop_Drawable tile = {};
 
-	tile.position = vec3(0, 0, 0);
-	tile.rotation = mat3(1.f);
+	tile.position  = vec3(0, 0, 0);
+	tile.transform = mat3(1.f);
 
-	update(renderer->floor_mesh, sizeof(Floor_Tile_Drawable), (byte*)(&tile));
-	update(renderer->sky_mesh  , sizeof(Floor_Tile_Drawable), (byte*)(&tile));
+	update(renderer->floor_mesh, sizeof(Prop_Drawable), (byte*)(&tile));
+	update(renderer->sky_mesh  , sizeof(Prop_Drawable), (byte*)(&tile));
 }
 void draw(Tile_Renderer* renderer, mat4 proj_view)
 {
@@ -92,7 +220,7 @@ void spawn(Orb* orbs, vec3 position)
 		}
 	}
 }
-void update(Orb* orbs, vec3 player_pos, float dtime, Audio sound)
+void update(Orb* orbs, float dtime, vec3 player_pos, Audio sound)
 {
 	for (uint i = 0; i < MAX_ORBS; i++)
 	{
@@ -173,157 +301,61 @@ struct Sea_Drawable
 
 struct Sea_Renderer
 {
-	Sea_Drawable water_tiles[1]; // water tiles
+	GLuint height, normal, foam;
+	Sea_Drawable water_tiles[9]; // water tiles
 	Drawable_Mesh mesh;
 	Shader shader;
+	float timer;
 };
 
 void init(Sea_Renderer* renderer)
 {
-	load(&renderer->mesh, "assets/meshes/sea.mesh", sizeof(renderer->water_tiles));
+	load(&renderer->mesh, "assets/meshes/env/sea.mesh", sizeof(renderer->water_tiles));
+
 	mesh_add_attrib_vec3(2, sizeof(Sea_Drawable), 0 * sizeof(vec3)); // position
 	mesh_add_attrib_vec3(3, sizeof(Sea_Drawable), 1 * sizeof(vec3)); // color
-	load(&(renderer->shader), "assets/shaders/fluid.vert", "assets/shaders/mesh.frag");
+
+	load(&(renderer->shader), "assets/shaders/ocean.vert", "assets/shaders/mesh.frag");
+
+	renderer->height = load_texture("height.bmp");
+	renderer->normal = load_texture("normal.bmp");
+	renderer->foam   = load_texture("foam.bmp");
 }
-void update_renderer(Sea_Renderer* renderer, vec3 pos)
+void update_renderer(Sea_Renderer* renderer, float dtime, vec3 pos)
 {
-	renderer->water_tiles[0].position = {};//  pos * vec3(1, 0, 1);
-	renderer->water_tiles[0].color     = vec3(0, 0.203, 0.254);
+	renderer->timer += dtime / 3;
+	if (renderer->timer > TWOPI) renderer->timer = 0;
+
+	for (uint i = 0; i < 3; i++) {
+	for (uint j = 0; j < 3; j++)
+	{
+		renderer->water_tiles[(i * 3) + j].position = vec3(50.f * i, -.6, 50.f * j) - vec3(50, 0, 50);
+		renderer->water_tiles[(i * 3) + j].color    = vec3(0, 0.203, 0.254);
+	}}
+
+	glDeleteTextures(1, &renderer->normal);
+	glDeleteTextures(1, &renderer->height);
+	glDeleteTextures(1, &renderer->foam);
+	renderer->height = load_texture("height.bmp");
+	renderer->normal = load_texture("normal.bmp");
+	renderer->foam   = load_texture("foam.bmp");
 
 	update(renderer->mesh, sizeof(renderer->water_tiles), (byte*)(&renderer->water_tiles));
 }
-void draw(Sea_Renderer* renderer, mat4 proj_view, float dtime)
-{
-	static float timer = 0; timer += dtime / 3;
-	if (timer > TWOPI) timer = 0;
-
-
-	bind(renderer->shader);
-	set_mat4(renderer->shader, "proj_view", proj_view);
-	set_float(renderer->shader, "timer", timer);
-	draw(renderer->mesh, 1);
-}
-
-// prop renderer
-
-#define MAX_PROPS 8 // max number of props of a given kind
-#define NUM_PROP_TYPES 4
-
-#define PROP_STATIC 1
-#define PROP_DESTRUCTIBLE 2
-
-struct Prop
-{
-	uint type;
-	vec3 position;
-	mat3 transform;
-};
-
-struct Props
-{
-	union
-	{
-		Prop props[MAX_PROPS * NUM_PROP_TYPES];
-
-		struct
-		{
-			Prop trees[MAX_PROPS];
-			Prop crates[MAX_PROPS];
-			Prop barrels[MAX_PROPS];
-			Prop campfires[MAX_PROPS];
-		};
-	};
-};
-
-void init(Props* props)
-{
-	props->trees[0].type = PROP_STATIC;
-	props->trees[0].position  = vec3(5, 0, -5);
-	props->trees[0].transform = mat3(.5);
-
-	props->campfires[0].type = PROP_STATIC;
-	props->campfires[0].position  = vec3(5, 0, 0);
-	props->campfires[0].transform = mat3(1);
-
-	props->crates[0].type = PROP_STATIC;
-	props->crates[0].position  = vec3(-5, 0, 0);
-	props->crates[0].transform = mat3(1);
-
-	props->barrels[0].type = PROP_STATIC;
-	props->barrels[0].position  = vec3(-2, 0, 6);
-	props->barrels[0].transform = mat3(1);
-}
-void update(Props* props)
-{
-
-}
-
-// rendering
-
-struct Prop_Drawable
-{
-	vec3 position;
-	mat3 transform;
-};
-
-struct Prop_Renderer
-{
-	Prop_Drawable props[MAX_PROPS];
-	GLuint texture_id, material_id;
-	Drawable_Mesh_UV meshes[4];
-	Shader shader;
-};
-
-void init(Prop_Renderer* renderer)
-{
-	load(&(renderer->shader), "assets/shaders/transform/mesh_uv.vert", "assets/shaders/mesh_uv.frag");
-
-	renderer->texture_id  = load_texture("assets/textures/palette2.bmp");
-	renderer->material_id = load_texture("assets/textures/materials.bmp");
-
-	load(&renderer->meshes[0], "assets/meshes/tree.mesh_uv", MAX_PROPS * sizeof(Prop_Drawable));
-	mesh_add_attrib_vec3(3, sizeof(Prop_Drawable), 0 * sizeof(vec3)); // position
-	mesh_add_attrib_mat3(4, sizeof(Prop_Drawable), 1 * sizeof(vec3)); // color
-
-	load(&renderer->meshes[1], "assets/meshes/crate.mesh_uv", MAX_PROPS * sizeof(Prop_Drawable));
-	mesh_add_attrib_vec3(3, sizeof(Prop_Drawable), 0 * sizeof(vec3)); // position
-	mesh_add_attrib_mat3(4, sizeof(Prop_Drawable), 1 * sizeof(vec3)); // color
-
-	load(&renderer->meshes[2], "assets/meshes/barrel.mesh_uv", MAX_PROPS * sizeof(Prop_Drawable));
-	mesh_add_attrib_vec3(3, sizeof(Prop_Drawable), 0 * sizeof(vec3)); // position
-	mesh_add_attrib_mat3(4, sizeof(Prop_Drawable), 1 * sizeof(vec3)); // color
-
-	load(&renderer->meshes[3], "assets/meshes/campfire.mesh_uv", MAX_PROPS * sizeof(Prop_Drawable));
-	mesh_add_attrib_vec3(3, sizeof(Prop_Drawable), 0 * sizeof(vec3)); // position
-	mesh_add_attrib_mat3(4, sizeof(Prop_Drawable), 1 * sizeof(vec3)); // color
-}
-void update_renderer(Prop_Renderer* renderer, Props* props)
-{
-	for (uint i = 0; i < NUM_PROP_TYPES; i++)
-	{
-		for (uint j = 0; j < MAX_PROPS; j++)
-		{
-			uint index = (i * MAX_PROPS) + j;
-			if (props->props[index].type > 0)
-			{
-				renderer->props[j].position  = props->props[index].position;
-				renderer->props[j].transform = props->props[index].transform;
-			} else renderer->props[j] = {};
-		}
-
-		update(renderer->meshes[i], sizeof(renderer->props), (byte*)renderer->props);
-	}
-}
-void draw(Prop_Renderer* renderer, mat4 proj_view)
+void draw(Sea_Renderer* renderer, mat4 proj_view)
 {
 	bind(renderer->shader);
 	set_mat4(renderer->shader, "proj_view", proj_view);
+	set_float(renderer->shader, "timer", renderer->timer);
 
-	glActiveTexture(GL_TEXTURE0); glBindTexture(GL_TEXTURE_2D, renderer->texture_id);
-	glActiveTexture(GL_TEXTURE1); glBindTexture(GL_TEXTURE_2D, renderer->material_id);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, renderer->height);
 
-	for (uint i = 0; i < NUM_PROP_TYPES; i++)
-	{
-		draw(renderer->meshes[i], MAX_PROPS);
-	}
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, renderer->normal);
+
+	glActiveTexture(GL_TEXTURE2);
+	glBindTexture(GL_TEXTURE_2D, renderer->foam);
+
+	draw(renderer->mesh, 9);
 }

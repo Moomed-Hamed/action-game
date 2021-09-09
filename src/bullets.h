@@ -25,7 +25,7 @@ void spawn(Bullet* bullets, vec3 position, vec3 velocity, uint type = 1)
 		}
 	}
 }
-void update(Bullet* bullets, Enemy* enemies, float dtime)
+void update(Bullet* bullets, float dtime, Enemy* enemies)
 {
 	for (uint i = 0; i < MAX_BULLETS; i++)
 	{
@@ -95,64 +95,4 @@ void draw(Bullet_Renderer* renderer, mat4 proj_view)
 	bind(renderer->shader);
 	set_mat4(renderer->shader, "proj_view", proj_view);
 	draw(renderer->mesh, MAX_BULLETS);
-}
-
-// pickups (health, ammo, etc.)
-#define MAX_PICKUPS 1
-
-struct Pickup
-{
-	vec3 position;
-};
-
-// rendering
-
-struct Pickup_Drawable
-{
-	vec3 position;
-	mat3 transform;
-	//vec2 texture_offset;
-};
-
-struct Pickup_Renderer
-{
-	uint num_pickups;
-	Pickup_Drawable pickups[MAX_PICKUPS];
-	Drawable_Mesh_UV mesh;
-	Shader shader;
-};
-
-void init(Pickup_Renderer* renderer)
-{
-	load(&renderer->mesh, "assets/meshes/ammo.mesh_uv", sizeof(renderer->pickups));
-	mesh_add_attrib_vec3(3, sizeof(Pickup_Drawable), 0); // world pos
-	mesh_add_attrib_mat3(4, sizeof(Pickup_Drawable), sizeof(vec3)); // transform
-
-	renderer->mesh.texture_id  = load_texture("assets/textures/palette.bmp");
-	renderer->mesh.material_id = load_texture("assets/textures/materials.bmp");
-
-	load(&(renderer->shader), "assets/shaders/transform/mesh_uv.vert", "assets/shaders/mesh_uv.frag");
-}
-void update_renderer(Pickup_Renderer* renderer, Pickup* pickups, float dtime)
-{
-	static float spin_timer = 0; spin_timer += dtime;
-	if (spin_timer > TWOPI) spin_timer = 0;
-
-	renderer->num_pickups = 0;
-
-	for (uint i = 0; i < MAX_PICKUPS; i++)
-	{
-		renderer->num_pickups += 1;
-		renderer->pickups[i].position = pickups[i].position;
-		renderer->pickups[i].transform = glm::rotate(spin_timer, vec3(0, 1, 0));
-	}
-
-	update(renderer->mesh, renderer->num_pickups * sizeof(Pickup_Drawable), (byte*)(renderer->pickups));
-}
-void draw(Pickup_Renderer* renderer, mat4 proj_view)
-{
-	bind(renderer->shader);
-	set_mat4(renderer->shader, "proj_view", proj_view);
-	bind_texture(renderer->mesh);
-	draw(renderer->mesh, renderer->num_pickups);
 }

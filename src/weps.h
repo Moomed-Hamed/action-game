@@ -5,7 +5,7 @@
 #define ACTION_FIRE	3
 #define ACTION_INSPECT	4
 
-#define ACTION_LOAD_TIME	.0f
+#define ACTION_LOAD_TIME	.2f
 #define ACTION_ARM_TIME	.25f
 #define ACTION_FIRE_TIME	.2f
 #define ACTION_INSPECT_TIME	3.f

@@ -22,7 +22,7 @@ void init(Player* player)
 	player->flintlock.shoot = load_audio("assets/audio/pistol_shot.audio");
 	player->flintlock.arm   = load_audio("assets/audio/arm.audio");
 }
-void update(Player* player, Bullet* bullets, Keyboard keys, Mouse mouse, float dtime)
+void update(Player* player, float dtime, Bullet* bullets, Keyboard keys, Mouse mouse)
 {
 	// i don't really have any idea why this works but it does so it stays 4 now
 
@@ -81,6 +81,7 @@ void update(Player* player, Bullet* bullets, Keyboard keys, Mouse mouse, float d
 	// item selection
 	if (keys.I.is_pressed) player->item_id = ITEM_GUN;
 	if (keys.O.is_pressed) player->item_id = ITEM_SWORD;
+	if (keys.P.is_pressed) player->item_id = ITEM_POTION;
 
 	update(&player->flintlock, bullets, &player->eyes, mouse, keys, dtime);
 }
@@ -107,9 +108,15 @@ void init(Player_Renderer* renderer)
 	renderer->sword.texture_id  = load_texture("assets/textures/palette2.bmp");
 	renderer->sword.material_id = load_texture("assets/textures/materials.bmp");
 
+	load(&renderer->potion, "assets/meshes/potion.mesh_uv", sizeof(Prop_Drawable));
+	mesh_add_attrib_vec3(3, sizeof(Prop_Drawable), 0); // world pos
+	mesh_add_attrib_mat3(4, sizeof(Prop_Drawable), sizeof(vec3)); // transform
+	renderer->potion.texture_id  = load_texture("assets/textures/palette2.bmp");
+	renderer->potion.material_id = load_texture("assets/textures/materials.bmp");
+
 	init(&renderer->flintlock_renderer);
 }
-void update_renderer(Player_Renderer* renderer, Player player, Mouse mouse, float dtime)
+void update_renderer(Player_Renderer* renderer, float dtime, Player player, Mouse mouse)
 {
 	renderer->item_id = player.item_id;
 
@@ -142,7 +149,9 @@ void update_renderer(Player_Renderer* renderer, Player player, Mouse mouse, floa
 		}
 
 		default: {
-			update(renderer->sword, sizeof(Prop_Drawable), (byte*)(&drawable));
+			drawable.position  = position + (front * .9f) + (up * -.4f) + (right * .4f) + vec3(turn_amount);
+			drawable.transform = point_at(front, up);
+			update(renderer->potion, sizeof(Prop_Drawable), (byte*)(&drawable));
 		} break;
 	}
 
@@ -154,6 +163,13 @@ void draw(Player_Renderer* renderer, mat4 proj_view)
 	{
 		case ITEM_GUN: {
 			draw(renderer->flintlock_renderer, proj_view);
+		} break;
+
+		case ITEM_POTION: {
+			bind(renderer->mesh_uv);
+			bind_texture(renderer->potion);
+			set_mat4(renderer->mesh_uv, "proj_view", proj_view);
+			draw(renderer->potion);
 		} break;
 
 		default: {

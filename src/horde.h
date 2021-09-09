@@ -1,6 +1,6 @@
 #include "peer.h"
 
-#define MAX_ENEMIES 5
+#define MAX_ENEMIES 1
 
 struct Enemy
 {
@@ -14,7 +14,7 @@ void init(Enemy* enemies)
 	for (uint i = 0; i < MAX_ENEMIES; i++)
 	{
 		enemies[i].type = 1;
-		enemies[i].health = 50;
+		enemies[i].health = 5;
 		enemies[i].trauma = 0;
 
 		vec3 position = vec3(random_chance_signed(), 0, random_chance_signed()) * 5.f;
@@ -23,7 +23,7 @@ void init(Enemy* enemies)
 		init_collider(&enemies[i].collider, position, vec3(0), vec3(0), 1, 1, .5);
 	}
 }
-void update(Enemy* enemies, Orb* orbs, Particle_Emitter* emitter, Camera* cam, float dtime)
+void update(Enemy* enemies, float dtime, Orb* orbs, Particle_Emitter* emitter, Camera* cam)
 {
 	for (uint i = 0; i < MAX_ENEMIES; i++)
 	{
@@ -69,7 +69,7 @@ void init(Enemy_Renderer* renderer)
 	load(&(renderer->shader), "assets/shaders/transform/mesh_anim_uv.vert", "assets/shaders/mesh_uv.frag");
 	load(&renderer->animation, "assets/animations/skeleton.anim"); // animaiton keyframes
 }
-void update_renderer(Enemy_Renderer* renderer, Enemy* enemies, float dtime)
+void update_renderer(Enemy_Renderer* renderer, float dtime, Enemy* enemies)
 {
 	for (uint i = 0; i < MAX_ENEMIES; i++)
 	{
