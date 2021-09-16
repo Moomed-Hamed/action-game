@@ -1,5 +1,5 @@
 // Copyright (c) 2021 Mohamed Hamed
-// Intermediary version 15.9.21
+// Intermediary version 4.10.21
 
 #pragma comment(lib, "winmm")
 #pragma comment (lib, "Ws2_32.lib") // networking
@@ -30,6 +30,8 @@
 #include <Windows.h>
 #include <fileapi.h>
 #include <iostream>
+#include <algorithm> // for min/max
+using std::min;
 
 #define out(val) std::cout << ' ' << val << '\n'
 #define stop std::cin.get()
@@ -463,10 +465,8 @@ void fft(Complex* input, uint N)
 			input[k]    += product;
 		} factor = mult * factor + factor; }
 	}
-
-	//if (FFT_BACKWARD == fft_direction) { for (int i = 0; i < size; ++i) { data[i] *= 1.f / size; } }
 }
-void ifft(Complex* input, uint N)
+void ifft(Complex* input, uint N, bool scale = true)
 {
 	uint target_index = 0;
 	uint bit_mask;
@@ -511,7 +511,7 @@ void ifft(Complex* input, uint N)
 		} factor = mult * factor + factor; }
 	}
 
-	for (int i = 0; i < N; ++i) { input[i] *= 1.f / N; } // normalize output array
+	if (scale) for (int i = 0; i < N; ++i) { input[i] *= 1.f / N; } // normalize output array
 }
 void fft2D(Complex* input, uint N)
 {
@@ -533,25 +533,59 @@ void fft2D(Complex* input, uint N)
 
 	free(subarray);
 }
-void ifft2D(Complex* input, uint N)
+void ifft2D(Complex* input, uint N, bool scale = false)
 {
 	Complex* subarray = Alloc(Complex, N); // num_rows = num_columns = N
 
 	for (uint n = 0; n < N; n++) // ifft the columns
 	{
 		for (int i = 0; i < N; ++i) { subarray[i] = input[(i * N) + n]; }
-		ifft(subarray, N);
+		ifft(subarray, N, scale);
 		for (int i = 0; i < N; ++i) { input[(i * N) + n] = subarray[i]; }
 	}
 
 	for (int n = 0; n < N; ++n) // ifft the rows
 	{
 		for (int i = 0; i < N; ++i) { subarray[i] = input[(n * N) + i]; }
-		ifft(subarray, N);
+		ifft(subarray, N, scale);
 		for (int i = 0; i < N; ++i) { input[(n * N) + i] = subarray[i]; }
 	}
 
 	free(subarray);
+}
+
+void save_fft2D(Complex* data, uint N, const char* name = "fft2D.bmp")
+{
+	bvec3* bitmap = (bvec3*)calloc(N * N, 3); // 3 bytes per channel
+	for (int i = 0; i < N; i++) { // up & down
+	for (int j = 0; j < N; j++)	// left & right
+	{
+		Complex z = data[(i * N) + j];
+		byte r = (cos(arg(z)) * 127) + 128;
+		byte g = (cos(arg(z)) * 127) + 128;
+		byte b = (cos(arg(z)) * 127) + 128;
+		bitmap[(i * N) + j] = { r , g , b };
+	} }
+
+	stbi_write_bmp(name, N, N, 3, (byte*)bitmap);
+	free(bitmap);
+}
+void save_ifft2D(Complex* data, uint N, const char* name = "ifft2D.bmp")
+{
+	bvec3* bitmap = (bvec3*)calloc(N * N, 3); // 3 bytes per channel
+	for (int i = 0; i < N; i++) { // up & down
+	for (int j = 0; j < N; j++)	// left & right
+	{
+		Complex z = data[(i * N) + j];
+
+		byte r = (abs(z) * cos(arg(z)) * 127) + 128;
+		byte g = (abs(z) * cos(arg(z)) * 127) + 128;
+		byte b = (abs(z) * cos(arg(z)) * 127) + 128;
+		bitmap[(i * N) + j] = { r , g , b };
+	} }
+
+	stbi_write_bmp(name, N, N, 3, (byte*)bitmap);
+	free(bitmap);
 }
 
 void fft_demo()
@@ -634,20 +668,25 @@ void fft2D_demo()
 	uint N = 256;
 	Complex* a = Alloc(Complex, N * N);
 	a[4] = Complex(N * N);
-	a[N] = Complex(N * N);
+	//a[N] = Complex(N * N);
 	ifft2D(a, N);
-	
-	bvec3* img = Alloc(bvec3, N * N); // 3 bytes per channel
-	for (uint i = 0; i < N; i++) { // up & down
-	for (uint j = 0; j < N; j++)   // left & right
+	save_fft2D(a, N, "demo.bmp");
+}
+
+
+void save_vec3(vec3* data, uint w, uint h, const char* name = "vec3.bmp")
+{
+	bvec3* bitmap = (bvec3*)calloc(w * h, 3); // 3 bytes per channel
+	for (int i = 0; i < w; i++) { // up & down
+	for (int j = 0; j < h; j++)	// left & right
 	{
-		Complex z = a[(i * N) + j];
-		byte r = (abs(z) * cos(arg(z)) * 127) + 128;
-		byte g = (abs(z) * cos(arg(z)) * 127) + 128;
-		byte b = (abs(z) * cos(arg(z)) * 127) + 128;
-		img[(i * N) + j] = { r, g, b };
+		vec3 v = data[(i * w) + j];
+		byte r = (v.x * 127) + 128;
+		byte g = (v.y * 127) + 128;
+		byte b = (v.z * 127) + 128;
+		bitmap[(i * w) + j] = { r , g , b };
 	} }
-	
-	stbi_write_bmp("test.bmp", N, N, 3, img);
-	free(a);
+
+	stbi_write_bmp(name, w, h, 3, (byte*)bitmap);
+	free(bitmap);
 }

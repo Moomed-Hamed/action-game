@@ -1,4 +1,4 @@
-#include "physics.h"
+#include "ocean.h"
 
 // prop renderer
 
@@ -301,44 +301,32 @@ struct Sea_Drawable
 
 struct Sea_Renderer
 {
-	GLuint height, normal, foam;
+	GLuint height, normal;
 	Sea_Drawable water_tiles[9]; // water tiles
 	Drawable_Mesh mesh;
 	Shader shader;
-	float timer;
 };
 
-void init(Sea_Renderer* renderer)
+void init(Sea_Renderer* renderer, GLuint height, GLuint normal)
 {
 	load(&renderer->mesh, "assets/meshes/env/sea.mesh", sizeof(renderer->water_tiles));
 
 	mesh_add_attrib_vec3(2, sizeof(Sea_Drawable), 0 * sizeof(vec3)); // position
 	mesh_add_attrib_vec3(3, sizeof(Sea_Drawable), 1 * sizeof(vec3)); // color
 
-	load(&(renderer->shader), "assets/shaders/ocean.vert", "assets/shaders/mesh.frag");
+	load(&(renderer->shader), "assets/shaders/ocean.vert", "assets/shaders/ocean.frag");
 
-	renderer->height = load_texture("height.bmp");
-	renderer->normal = load_texture("normal.bmp");
-	renderer->foam   = load_texture("foam.bmp");
+	renderer->height = height;
+	renderer->normal = normal;
 }
 void update_renderer(Sea_Renderer* renderer, float dtime, vec3 pos)
 {
-	renderer->timer += dtime / 3;
-	if (renderer->timer > TWOPI) renderer->timer = 0;
-
 	for (uint i = 0; i < 3; i++) {
 	for (uint j = 0; j < 3; j++)
 	{
 		renderer->water_tiles[(i * 3) + j].position = vec3(50.f * i, -.6, 50.f * j) - vec3(50, 0, 50);
-		renderer->water_tiles[(i * 3) + j].color    = vec3(0, 0.203, 0.254);
+		renderer->water_tiles[(i * 3) + j].color    = vec3(0, 0.24, 0.37); //vec3(0.031, 0.952, 0.874);
 	}}
-
-	glDeleteTextures(1, &renderer->normal);
-	glDeleteTextures(1, &renderer->height);
-	glDeleteTextures(1, &renderer->foam);
-	renderer->height = load_texture("height.bmp");
-	renderer->normal = load_texture("normal.bmp");
-	renderer->foam   = load_texture("foam.bmp");
 
 	update(renderer->mesh, sizeof(renderer->water_tiles), (byte*)(&renderer->water_tiles));
 }
@@ -346,16 +334,12 @@ void draw(Sea_Renderer* renderer, mat4 proj_view)
 {
 	bind(renderer->shader);
 	set_mat4(renderer->shader, "proj_view", proj_view);
-	set_float(renderer->shader, "timer", renderer->timer);
 
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, renderer->height);
 
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, renderer->normal);
-
-	glActiveTexture(GL_TEXTURE2);
-	glBindTexture(GL_TEXTURE_2D, renderer->foam);
 
 	draw(renderer->mesh, 9);
 }

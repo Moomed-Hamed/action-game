@@ -1,31 +1,31 @@
 #include "networking.h"
-#include "ocean.h"
 
 #define TARGET_FRAMES_PER_SECOND ((float)120)
 #define DRAW_DISTANCE 512.0f
 
 int main()
 {
-	Ocean ocean = {};
-	init(&ocean, 128, 0.005f, 16.f * normalize(vec2(1,1)), 16);
-
-	float time = 0;
+	//make_stationary_spectrum(25.f * normalize(vec2(1,1)));
+	//return 0;
 
 	Window   window = {};
 	Mouse    mouse  = {};
 	Keyboard keys   = {};
 
-	init_window(&window, 1280, 720, "action game");
-	//init_window(&window, 1920, 1080, "action game");
+	//init_window(&window, 1280, 720, "action game");
+	init_window(&window, 1920, 1080, "action game");
 	//init_window(&window, 2560, 1440, "action game");
 	init_keyboard(&keys);
+
+	Ocean ocean = {};
+	init(&ocean, normalize(vec2(1, 0)) * 10.f);
 
 	Props* props = Alloc(Props, 1); init(props);
 	Prop_Renderer* prop_renderer = Alloc(Prop_Renderer, 1);
 	init(prop_renderer);
 
 	Sea_Renderer* sea_renderer = Alloc(Sea_Renderer, 1);
-	init(sea_renderer);
+	init(sea_renderer, ocean.height, ocean.normal);
 
 	Bullet* bullets = Alloc(Bullet, MAX_BULLETS);
 	Bullet_Renderer* bullet_renderer = Alloc(Bullet_Renderer, 1);
@@ -118,14 +118,12 @@ int main()
 		update_renderer(tile_renderer);
 		update_renderer(prop_renderer, props);
 
-		static uint i = 1;
-		//if(keys.L.is_pressed && !keys.L.was_pressed) init(&ocean, 128, .005f, (float)i++ * normalize(vec2(1)), 16);
+		static float time = 0; time += frame_time / 4;
+		calculate_waves(ocean, time);
 
-		evaluate_waves(ocean, time);
-		write_heightmap(ocean);
-		write_normal_map(ocean);
-		write_folding_map(ocean);
-		time += frame_time / 70000;
+		static float i = 0;
+		if (keys.J.is_pressed && !keys.J.was_pressed)
+			recalculate(&ocean, normalize(vec2(1, 0)) * 5.f, .001 + i++ * .01);
 
 		// Geometry pass
 		glBindFramebuffer(GL_FRAMEBUFFER, g_buffer.FBO);
