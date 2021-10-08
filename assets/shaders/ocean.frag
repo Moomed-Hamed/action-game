@@ -21,8 +21,7 @@ void main()
 	vec3 normal = texture(normalmap, vs_out.tex_coords).rgb;
 	float foam  = texture(heightmap, vs_out.tex_coords).w;
 
-	vec3 color = vs_out.color;
-	if(foam > .12) color = vec3(1);
+	vec3 color = vs_out.color + vec3(foam);
 
 	frag_position = vec4(vs_out.frag_pos,.0); // metalness
 	frag_normal   = vec4(normal         ,.0); // roughness (breaks the lighting for some reason

@@ -412,7 +412,7 @@ void emit_explosion(Particle_Emitter* emitter, vec3 position)
 void emit_fire(Particle_Emitter* emitter)
 {
 	uint num = (random_uint() % 3) + 1;
-	for (uint i = 0; i < num; i++) { emit_circle(emitter, vec3(5, 0, 0), PARTICLE_FIRE, .2); }
+	for (uint i = 0; i < num; i++) { emit_circle(emitter, vec3(9.3, -.2, -6.5), PARTICLE_FIRE, .2); }
 	//emit_circle(emitter, vec3(5, 1, 0), PARTICLE_SMOKE, .2);
 }
 

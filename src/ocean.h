@@ -1,4 +1,4 @@
-#include "physics.h"
+#include "height.h"
 
 Complex gaussian_random_complex()
 {
@@ -149,7 +149,7 @@ struct Ocean
 	vec4* d; // xyz = displacement, w = foam
 	vec3* n; // normal
 	Complex* h0, *h0_conj; // intitial spectrum & its conjugate
-	Complex *h, *hmx, *hmz, *hdx, *hdz; // mx = slope_x
+	Complex* h, *hmx, *hmz, *hdx, *hdz; // mx = slope_x
 	union { GLuint tex[2]; struct { GLuint height, normal; }; };
 };
 
@@ -176,7 +176,7 @@ float dispersion(float k_length, float g = 9.81)
 {
 	return sqrt(k_length * g);
 }
-Complex h0(vec2 k, uint N, float L, vec2 w, float A = 1)
+Complex h0(vec2 k, uint N, float L, vec2 w, float A = .01)
 {
 	float k_length = length(k);
 	float k_angle = atan2(k.y, k.x);
@@ -199,7 +199,6 @@ Complex ht(Complex h0, Complex h0mkc, uint N, float k_length, float L, float t)
 	float c = cos(wt), s = sin(wt);
 	return h0 * Complex(c, s) + h0mkc * Complex(c, -s);
 }
-void calculate_jacobian(uint N, vec4* d);
 
 void init(Ocean* ocean, vec2 w, float L = 6, uint N = 256)
 {
@@ -241,15 +240,15 @@ void init(Ocean* ocean, vec2 w, float L = 6, uint N = 256)
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, N, N, 0, GL_RGBA, GL_FLOAT, ocean->d);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	
 	glBindTexture(GL_TEXTURE_2D, ocean->normal);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, N, N, 0, GL_RGB, GL_FLOAT, ocean->n);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 }
 void calculate_waves(Ocean& ocean, float t)
 {
@@ -316,20 +315,13 @@ void calculate_waves(Ocean& ocean, float t)
 		float dzd = d[x  * N + jd].z;
 
 		// Jacobian (or folding map)
-		float Jxx = 1.f + (dxr - dxl) * 0.5f;
-		float Jzz = 1.f + (dzu - dzd) * 0.5f;
-		float Jzx = (dzu - dzd) * 0.5f;
-		float Jxz = Jzx;
+		float jxx = 1.f + (dxr - dxl) * 0.5f;
+		float jzz = 1.f + (dzu - dzd) * 0.5f;
+		float jzx = (dzu - dzd) * 0.5f;
+		float jxz = jzx;
+		float jacobian = jxx * jzz - jxz * jzx;
 
-		float jacobian = Jxx * Jzz - Jxz * Jzx;
-		float epsilon = 0.95f;
-		
-		if (jacobian - epsilon > 0)
-		{
-			jacobian = jacobian - epsilon;
-		} else jacobian = 0;
-
-		d[x * N + z].w = jacobian;
+		d[x * N + z].w = jacobian < .98 ? 1 : 0;
 	} }
 
 	glBindTexture(GL_TEXTURE_2D, ocean.height);

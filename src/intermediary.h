@@ -1,5 +1,5 @@
 // Copyright (c) 2021 Mohamed Hamed
-// Intermediary version 4.10.21
+// Intermediary version 14.10.21
 
 #pragma comment(lib, "winmm")
 #pragma comment (lib, "Ws2_32.lib") // networking
@@ -22,7 +22,6 @@
 #include "external/OpenAL/al.h" // for audio
 #include "external/OpenAL/alc.h"
 
-#include <vector>
 #include <complex>
 
 #include <winsock2.h> // for some reason rearranging these
@@ -57,6 +56,13 @@ byte* read_text_file_into_memory(const char* path)
 	CloseHandle(os_file);
 
 	return memory;
+}
+void load_file_r32(const char* path, float* memory, uint n)
+{
+	DWORD BytesRead;
+	HANDLE os_file = CreateFile(path, GENERIC_READ, NULL, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+	ReadFile(os_file, (byte*)memory, n * n * sizeof(float), &BytesRead, NULL);
+	CloseHandle(os_file);
 }
 // -- Timers -- // // might be broken idk
 
@@ -671,22 +677,4 @@ void fft2D_demo()
 	//a[N] = Complex(N * N);
 	ifft2D(a, N);
 	save_fft2D(a, N, "demo.bmp");
-}
-
-
-void save_vec3(vec3* data, uint w, uint h, const char* name = "vec3.bmp")
-{
-	bvec3* bitmap = (bvec3*)calloc(w * h, 3); // 3 bytes per channel
-	for (int i = 0; i < w; i++) { // up & down
-	for (int j = 0; j < h; j++)	// left & right
-	{
-		vec3 v = data[(i * w) + j];
-		byte r = (v.x * 127) + 128;
-		byte g = (v.y * 127) + 128;
-		byte b = (v.z * 127) + 128;
-		bitmap[(i * w) + j] = { r , g , b };
-	} }
-
-	stbi_write_bmp(name, w, h, 3, (byte*)bitmap);
-	free(bitmap);
 }

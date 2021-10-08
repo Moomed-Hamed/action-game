@@ -16,13 +16,18 @@ int main()
 	init_window(&window, 1920, 1080, "action game");
 	//init_window(&window, 2560, 1440, "action game");
 	init_keyboard(&keys);
-
+	
 	Ocean ocean = {};
 	init(&ocean, normalize(vec2(1, 0)) * 10.f);
+	calculate_waves(ocean, 0);
 
 	Props* props = Alloc(Props, 1); init(props);
 	Prop_Renderer* prop_renderer = Alloc(Prop_Renderer, 1);
 	init(prop_renderer);
+
+	Heightmap* heightmap = Alloc(Heightmap, 1);
+	Heightmap_Renderer* heightmap_renderer = Alloc(Heightmap_Renderer, 1);
+	init(heightmap_renderer, heightmap, "assets/textures/heightmap.r32");
 
 	Sea_Renderer* sea_renderer = Alloc(Sea_Renderer, 1);
 	init(sea_renderer, ocean.height, ocean.normal);
@@ -100,21 +105,21 @@ int main()
 
 		// game updates
 		update(player , frame_time, bullets, keys, mouse); peer->look_direction = player->eyes.front;
-		update(orbs   , frame_time, player->eyes.position, orb);
-		update(emitter, frame_time, vec3(0));
-		update(bullets, frame_time, enemies);
 		update(enemies, frame_time, orbs, emitter, &player->eyes);
+		update(orbs   , frame_time, player->eyes.position, orb);
+		update(bullets, frame_time, enemies);
+		update(emitter, frame_time, vec3(0));
 
 		// renderer updates
 		update(gui);
-		update_renderer(particle_renderer , emitter);
-		update_renderer(physics_renderer  , colliders);
-		update_renderer(peer_renderer     , frame_time, *peer);
 		update_renderer(sea_renderer      , frame_time, player->eyes.position);
 		update_renderer(player_renderer   , frame_time, *player, mouse);
-		update_renderer(orb_renderer      , orbs);
-		update_renderer(bullet_renderer   , bullets);
 		update_renderer(enemy_renderer    , frame_time, enemies);
+		update_renderer(peer_renderer     , frame_time, *peer);
+		update_renderer(physics_renderer  , colliders);
+		update_renderer(particle_renderer , emitter);
+		update_renderer(bullet_renderer   , bullets);
+		update_renderer(orb_renderer      , orbs);
 		update_renderer(tile_renderer);
 		update_renderer(prop_renderer, props);
 
@@ -130,16 +135,17 @@ int main()
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		mat4 proj_view = proj * lookAt(player->eyes.position, player->eyes.position + player->eyes.front, player->eyes.up);
 		
+		draw(sea_renderer      , proj_view);
+		draw(player_renderer   , proj_view);
+		draw(enemy_renderer    , proj_view);
 		draw(particle_renderer , proj_view);
 		draw(tile_renderer     , proj_view);
-		draw(physics_renderer  , proj_view);
-		draw(peer_renderer     , proj_view);
 		draw(orb_renderer      , proj_view);
 		draw(bullet_renderer   , proj_view);
-		draw(enemy_renderer    , proj_view);
-		draw(player_renderer   , proj_view);
 		draw(prop_renderer     , proj_view);
-		draw(sea_renderer      , proj_view);
+		draw(heightmap_renderer, proj_view);
+		//draw(physics_renderer, proj_view);
+		//draw(peer_renderer   , proj_view);
 		draw(gui);
 
 		// Lighting pass

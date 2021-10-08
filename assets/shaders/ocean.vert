@@ -22,11 +22,11 @@ void main()
 {
 	float scale = 20;
 	vec3 p = position + world_position;
-	vec3 d = texture(heightmap, p.xz / scale).rgb; d.y /= 5;
+	vec3 d = texture(heightmap, p.xz / scale).rgb; d.y /= 1;
 	p += d;
 
 	vs_out.tex_coords = p.xz / scale;
-	vs_out.frag_pos = p + vec3(0, .4, 0);
+	vs_out.frag_pos = p;
 	vs_out.color = color;
 
 	gl_Position = proj_view * vec4(vs_out.frag_pos, 1.0);

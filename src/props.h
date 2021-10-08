@@ -37,23 +37,23 @@ struct Props
 void init(Props* props)
 {
 	props->trees[0].type = PROP_STATIC;
-	props->trees[0].position  = vec3(5, 0, -5);
+	props->trees[0].position  = vec3(12.3, -.3, 4.3);
 	props->trees[0].transform = mat3(.5);
 
 	props->campfires[0].type = PROP_STATIC;
-	props->campfires[0].position  = vec3(5, 0, 0);
+	props->campfires[0].position  = vec3(9.3, -.2, -6.5);
 	props->campfires[0].transform = mat3(1);
 
 	props->crates[0].type = PROP_STATIC;
-	props->crates[0].position  = vec3(-5, 0, 0);
+	props->crates[0].position  = vec3(-15, 0, 6);
 	props->crates[0].transform = mat3(1);
 
 	props->barrels[0].type = PROP_STATIC;
-	props->barrels[0].position  = vec3(-2, 0, 6);
+	props->barrels[0].position  = vec3(13, -.2, -6.25);
 	props->barrels[0].transform = mat3(1);
 
 	props->grass_1[0].type = PROP_STATIC;
-	props->grass_1[0].position = vec3(2, 0, 6);
+	props->grass_1[0].position = vec3(8, -.2, 7);
 	props->grass_1[0].transform = mat3(1);
 }
 void update(Props* props)
@@ -147,28 +147,18 @@ void draw(Prop_Renderer* renderer, mat4 proj_view)
 
 struct Tile_Renderer
 {
-	Drawable_Mesh_UV floor_mesh, sky_mesh;
+	Drawable_Mesh_UV sky_mesh;
 	Shader shader;
 };
 
 void init(Tile_Renderer* renderer)
 {
-	load(&renderer->floor_mesh, "assets/meshes/env/ground.mesh_uv", sizeof(Prop_Drawable));
-	mesh_add_attrib_vec3(3, sizeof(Prop_Drawable), 0); // world pos
-	mesh_add_attrib_mat3(4, sizeof(Prop_Drawable), sizeof(vec3)); // rotation
-
 	load(&renderer->sky_mesh, "assets/meshes/env/sky.mesh_uv", sizeof(Prop_Drawable));
 	mesh_add_attrib_vec3(3, sizeof(Prop_Drawable), 0); // world pos
 	mesh_add_attrib_mat3(4, sizeof(Prop_Drawable), sizeof(vec3)); // rotation
 
-	GLuint texture  = load_texture("assets/textures/palette2.bmp");
-	GLuint material = load_texture("assets/textures/materials.bmp");
-
-	renderer->floor_mesh.texture_id = texture;
-	renderer->sky_mesh.texture_id   = texture;
-
-	renderer->floor_mesh.material_id = material;
-	renderer->sky_mesh.material_id   = material;
+	renderer->sky_mesh.texture_id  = load_texture("assets/textures/palette2.bmp");
+	renderer->sky_mesh.material_id = load_texture("assets/textures/materials.bmp");
 
 	load(&renderer->shader, "assets/shaders/transform/mesh_uv.vert", "assets/shaders/mesh_uv.frag");
 }
@@ -179,16 +169,12 @@ void update_renderer(Tile_Renderer* renderer)
 	tile.position  = vec3(0, 0, 0);
 	tile.transform = mat3(1.f);
 
-	update(renderer->floor_mesh, sizeof(Prop_Drawable), (byte*)(&tile));
 	update(renderer->sky_mesh  , sizeof(Prop_Drawable), (byte*)(&tile));
 }
 void draw(Tile_Renderer* renderer, mat4 proj_view)
 {
 	bind(renderer->shader);
 	set_mat4(renderer->shader, "proj_view", proj_view);
-
-	bind_texture(renderer->floor_mesh);
-	draw(renderer->floor_mesh);
 
 	bind_texture(renderer->sky_mesh);
 	draw(renderer->sky_mesh);
@@ -324,8 +310,8 @@ void update_renderer(Sea_Renderer* renderer, float dtime, vec3 pos)
 	for (uint i = 0; i < 3; i++) {
 	for (uint j = 0; j < 3; j++)
 	{
-		renderer->water_tiles[(i * 3) + j].position = vec3(50.f * i, -.6, 50.f * j) - vec3(50, 0, 50);
-		renderer->water_tiles[(i * 3) + j].color    = vec3(0, 0.24, 0.37); //vec3(0.031, 0.952, 0.874);
+		renderer->water_tiles[(i * 3) + j].position = vec3(50.f * i, 0, 50.f * j) - vec3(50, 0, 50);
+		renderer->water_tiles[(i * 3) + j].color    = vec3(0, .24, .37); //vec3(.03, .95, 0.87);
 	}}
 
 	update(renderer->mesh, sizeof(renderer->water_tiles), (byte*)(&renderer->water_tiles));

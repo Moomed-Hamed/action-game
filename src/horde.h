@@ -77,7 +77,7 @@ void update_renderer(Enemy_Renderer* renderer, float dtime, Enemy* enemies)
 		{
 			vec3 offset = shake(enemies[i].trauma) * .1f;
 
-			renderer->enemies[i].position  = enemies[i].collider.position + offset - vec3(0, .5, 0);
+			renderer->enemies[i].position  = enemies[i].collider.position + offset + vec3(8, -.7, 9);
 			renderer->enemies[i].transform = mat3(1 + offset.x);
 		} else { renderer->enemies[i] = {}; }
 	}

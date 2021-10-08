@@ -105,11 +105,35 @@ GLuint load_texture(const char* path)
 
 	glGenTextures(1, &id);
 	glBindTexture(GL_TEXTURE_2D, id);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glGenerateMipmap(GL_TEXTURE_2D);
+
+	stbi_image_free(image);
+
+	return id;
+}
+GLuint load_texture_png(const char* path)
+{
+	GLuint id = {};
+	int width, height, num_channels;
+	byte* image;
+
+	stbi_set_flip_vertically_on_load(false);
+
+	image = stbi_load(path, &width, &height, &num_channels, 0);
+	if (image == NULL) out("ERROR : '" << path << "' NOT FOUND!");
+
+	glGenTextures(1, &id);
+	glBindTexture(GL_TEXTURE_2D, id);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glGenerateMipmap(GL_TEXTURE_2D);
 
 	stbi_image_free(image);
@@ -320,7 +344,7 @@ void update(Drawable_Mesh mesh, uint vb_size, byte* vb_data)
 	glBindBuffer(GL_ARRAY_BUFFER, mesh.VBO);
 	glBufferSubData(GL_ARRAY_BUFFER, 0, vb_size, vb_data);
 }
-void draw(Drawable_Mesh mesh, uint num_instances)
+void draw(Drawable_Mesh mesh, uint num_instances = 1)
 {
 	glBindVertexArray(mesh.VAO);
 	glDrawElementsInstanced(GL_TRIANGLES, mesh.num_indices, GL_UNSIGNED_INT, 0, num_instances);
@@ -756,7 +780,7 @@ Shader make_lighting_shader()
 
 	vec3 fire = vec3(.905, .568, .113);
 
-	vec3 light_positions[4] = {vec3(5.0, .35, 0.0), vec3(6,1,-6), vec3(0, 4, 0), vec3(-1,.2,-1) };
+	vec3 light_positions[4] = {vec3(9.3, .1, -6.5), vec3(6,1,-6), vec3(0, 4, 0), vec3(-1,.2,-1) };
 	vec3 light_colors[4]    = { fire, fire, fire, fire };
 
 	set_vec3(lighting_shader, "light_positions[0]", light_positions[0]);
