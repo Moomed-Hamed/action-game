@@ -20,25 +20,25 @@ This is what action-game's README looked like right before it became pirate-game
 i'm not sure what this repo will end up being.
 for now, it's just a place where i have fun programming
 
-![showcase](showcase_0.gif)
+![showcase](old/0.gif)
 
 ### Animations
 instead of traditional animation, a library of poses is used
 with different interpolation techniques to add impact and fidelity.
 
-![showcase](showcase_1.gif)
+![showcase](old/1.gif)
 
 ### Particle System
 simple but versitile particle system that is capable of basic effects
 like fire, explosions, blood spurts, etc. it supports wind and physics as well.
 
-![showcase](showcase_2.gif)
+![showcase](old/2.gif)
 
 ### Multiplayer
 nothing special here, just a basic multiplayer implementation 
 that sends position & orientation data over tcp every few miliseconds.
 
-![showcase](showcase_3.gif)
+![showcase](old/3.gif)
 
 ### Credits & Extras
 - programmer : Me

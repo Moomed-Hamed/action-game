@@ -24,6 +24,6 @@ void main()
 	vec3 color = vs_out.color + vec3(foam);
 
 	frag_position = vec4(vs_out.frag_pos,.0); // metalness
-	frag_normal   = vec4(normal         ,.0); // roughness (breaks the lighting for some reason
-	frag_albedo   = vec4(color          ,.5); // ambient occlusion
+	frag_normal   = vec4(normal         ,.65 + foam); // roughness
+	frag_albedo   = vec4(color          ,.05); // ambient occlusion
 }

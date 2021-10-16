@@ -765,6 +765,7 @@ struct Light_Renderer
 {
 	Point_Light* point_lights;
 	Spot_Light*  spot_lights;
+	Shader shader;
 };
 
 void init(Light_Renderer* renderer)
@@ -778,10 +779,10 @@ Shader make_lighting_shader()
 	load(&lighting_shader, "assets/shaders/lighting.vert", "assets/shaders/lighting.frag");
 	bind(lighting_shader);
 
-	vec3 fire = vec3(.905, .568, .113);
+	vec3 fire = vec3(.90, .57, .11);
 
-	vec3 light_positions[4] = {vec3(9.3, .1, -6.5), vec3(6,1,-6), vec3(0, 4, 0), vec3(-1,.2,-1) };
-	vec3 light_colors[4]    = { fire, fire, fire, fire };
+	vec3 light_positions[4] = { vec3(9.3,.25,-6.5), vec3(0,.25,-6.5), vec3(10,.5,-12.5), vec3(3,1,3) };
+	vec3 light_colors   [4] = { fire, vec3(0,1,1), vec3(0,1,1), vec3(0,1,1) };
 
 	set_vec3(lighting_shader, "light_positions[0]", light_positions[0]);
 	set_vec3(lighting_shader, "light_positions[1]", light_positions[1]);

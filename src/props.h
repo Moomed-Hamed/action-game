@@ -311,7 +311,7 @@ void update_renderer(Sea_Renderer* renderer, float dtime, vec3 pos)
 	for (uint j = 0; j < 3; j++)
 	{
 		renderer->water_tiles[(i * 3) + j].position = vec3(50.f * i, 0, 50.f * j) - vec3(50, 0, 50);
-		renderer->water_tiles[(i * 3) + j].color    = vec3(0, .24, .37); //vec3(.03, .95, 0.87);
+		renderer->water_tiles[(i * 3) + j].color    = vec3(0, 0.4, 0.8); // vec3(.03, .95, .87); // vec3(0, .24, .37);
 	}}
 
 	update(renderer->mesh, sizeof(renderer->water_tiles), (byte*)(&renderer->water_tiles));

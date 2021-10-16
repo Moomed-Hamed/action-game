@@ -1,5 +1,5 @@
 // Copyright (c) 2021 Mohamed Hamed
-// Intermediary version 14.10.21
+// Intermediary version 23.10.21
 
 #pragma comment(lib, "winmm")
 #pragma comment (lib, "Ws2_32.lib") // networking
@@ -21,8 +21,6 @@
 
 #include "external/OpenAL/al.h" // for audio
 #include "external/OpenAL/alc.h"
-
-#include <complex>
 
 #include <winsock2.h> // for some reason rearranging these
 #include <ws2tcpip.h> // includes breaks everything
@@ -424,7 +422,20 @@ void mul(complex a, complex b)
 
 }*/
 
+#include <complex>
 typedef std::complex<double> Complex;
+
+Complex gaussian_random_complex()
+{
+	float x1, x2, w;
+	do {
+		x1 = random_chance_signed();
+		x2 = random_chance_signed();
+		w = x1 * x1 + x2 * x2;
+	} while (w > 1.f);
+	w = sqrt((-2.f * log(w)) / w);
+	return Complex(x1 * w, x2 * w);
+}
 
 // fast fourier : result stored in input array
 void fft(Complex* input, uint N)

@@ -19,7 +19,7 @@ void main()
 {
 	vec3 normal = (texture(normals, vs_out.tex_coord).rbg * 2) - 1;
 
-	frag_position = vec4(vs_out.frag_pos,.0); // metalness
-	frag_normal   = vec4(normal         ,.0); // roughness
-	frag_albedo   = vec4(vs_out.color   ,.9); // ambient occlusion
+	frag_position = vec4(vs_out.frag_pos,.3); // metalness
+	frag_normal   = vec4(normal         ,.9); // roughness
+	frag_albedo   = vec4(vs_out.color   ,.1); // ambient occlusion
 }

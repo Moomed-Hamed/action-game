@@ -5,9 +5,6 @@
 
 int main()
 {
-	//make_stationary_spectrum(25.f * normalize(vec2(1,1)));
-	//return 0;
-
 	Window   window = {};
 	Mouse    mouse  = {};
 	Keyboard keys   = {};
@@ -124,7 +121,7 @@ int main()
 		update_renderer(prop_renderer, props);
 
 		static float time = 0; time += frame_time / 4;
-		calculate_waves(ocean, time);
+		//calculate_waves(ocean, time);
 
 		static float i = 0;
 		if (keys.J.is_pressed && !keys.J.was_pressed)
@@ -144,7 +141,7 @@ int main()
 		draw(bullet_renderer   , proj_view);
 		draw(prop_renderer     , proj_view);
 		draw(heightmap_renderer, proj_view);
-		//draw(physics_renderer, proj_view);
+		draw(physics_renderer, proj_view);
 		//draw(peer_renderer   , proj_view);
 		draw(gui);
 
