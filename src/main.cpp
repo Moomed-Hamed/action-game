@@ -121,7 +121,7 @@ int main()
 		update_renderer(prop_renderer, props);
 
 		static float time = 0; time += frame_time / 4;
-		//calculate_waves(ocean, time);
+		calculate_waves(ocean, time);
 
 		static float i = 0;
 		if (keys.J.is_pressed && !keys.J.was_pressed)

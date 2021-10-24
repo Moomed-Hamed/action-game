@@ -12,6 +12,10 @@
 	draw(mesh);
 */
 
+// ------------------------------------------------- //
+// -------------------- Shaders -------------------- //
+// ------------------------------------------------- //
+
 struct Shader { GLuint id; };
 
 void load(Shader* shader, const char* vert_path, const char* frag_path)
@@ -92,6 +96,10 @@ void set_mat4 (Shader shader, const char* name, mat4 value )
 	glUniformMatrix4fv(glGetUniformLocation(shader.id, name), 1, GL_FALSE, (float*)&value);
 }
 
+// ------------------------------------------------- //
+// -------------------- Textures ------------------- //
+// ------------------------------------------------- //
+
 GLuint load_texture(const char* path)
 {
 	GLuint id = {};
@@ -140,6 +148,10 @@ GLuint load_texture_png(const char* path)
 
 	return id;
 }
+
+// ------------------------------------------------- //
+// ------------------ Mesh Loading ----------------- //
+// ------------------------------------------------- //
 
 struct Mesh_Data
 {
@@ -275,6 +287,10 @@ void load(Mesh_Data_Anim_UV* data, const char* path)
 
 	fclose(mesh_file);
 }
+
+// ------------------------------------------------- //
+// ---------------- Mesh Renderables --------------- //
+// ------------------------------------------------- //
 
 struct Drawable_Mesh
 {
@@ -614,6 +630,10 @@ void mesh_add_attrib_mat3 (GLuint attrib_id, uint stride, uint offset)
 	glEnableVertexAttribArray(attrib_id);
 }
 
+// ------------------------------------------------- //
+// ---------- Deferred Rendering Pipeline ---------- //
+// ------------------------------------------------- //
+
 /* -- deferred rendering theory --
 
 	glBindFramebuffer(GL_FRAMEBUFFER, g_buffer.FBO);
@@ -749,6 +769,10 @@ void draw_g_buffer(G_Buffer g_buffer)
 	GL_FRAMEBUFFER = 0 for default framebuffer
 */
 
+// ------------------------------------------------- //
+// -------------------- Lighting ------------------- //
+// ------------------------------------------------- //
+
 struct Point_Light
 {
 	vec3 position, color;
@@ -797,7 +821,9 @@ Shader make_lighting_shader()
 	return lighting_shader;
 }
 
-// 2D rendering
+// ------------------------------------------------- //
+// ------------------ 2D Rendering ----------------- //
+// ------------------------------------------------- //
 
 struct Drawable_Mesh_2D
 {
@@ -940,7 +966,9 @@ void draw(Drawable_Mesh_2D_UV mesh, uint num_instances = 1)
 	glDrawElementsInstanced(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0, num_instances);
 }
 
-// animation
+// ------------------------------------------------- //
+// -------------------- Animation ------------------ //
+// ------------------------------------------------- //
 
 #define MAX_ANIMATED_BONES 16
 
@@ -1041,7 +1069,9 @@ void update_animation(Animation* anim, mat4* poses, float dtime)
 	free(keyframes);
 }
 
-// camera
+// ------------------------------------------------- //
+// --------------------- Camera -------------------- //
+// ------------------------------------------------- //
 
 #define DIR_FORWARD	0
 #define DIR_BACKWARD	1
