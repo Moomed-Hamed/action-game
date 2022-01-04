@@ -1,4 +1,6 @@
-#include "intermediary.h"
+// Copyright (c) 2022 Mohamed
+// action game version 4.1.22
+#include "proprietary/boilerplate.h"
 
 #define WINDOW_ERROR(str) out("WINDOW ERROR: " << str)
 
