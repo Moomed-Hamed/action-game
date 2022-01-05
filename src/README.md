@@ -1,21 +1,19 @@
 # code structure
 This codebase is designed to be as simple & efficient as possible.
 
-## rules & structure
+## structure & rules
 - main.cpp is the only source file
 - each header file can only be #included once; no header guards
-- intermediary.h is the only file allowed to #inlcude external code
+- boilerplate.h is the only file allowed to #inlcude external code
 
 ## files
-- window.h   : opening a window, keyboard & mouse input, context instantiation
-- renderer.h : model loading, OpenGL rendering, animation, 3D camera
+- window.h   : boilerplate, opening a window, key & mouse input, context instantiation
+- renderer.h : mesh loading, OpenGL rendering, animation, 3D camera
 - physics.h  : colliders, particle system, collider rendering
 - networking.h : server & client interaction & functionality
 
-## refresher
-- ok you fucking idiot, you keep forgetting how this shit works so here you go:
-
-### how meshes are loaded and rendered:
+## refreshers
+### how meshes are loaded & rendered:
 #### blender
 - export your mesh as obj(w/ normals & optionally texture coords)
 - or export as collada for animations(1 mesh at a time)
@@ -27,10 +25,9 @@ This codebase is designed to be as simple & efficient as possible.
 - game renderer will load your .mesh into a Mesh_Data structure
 - then it gets put into vertex buffers in the load(Drawable_Mesh) function
 - the load() function will do some GL stuff and return a Drawable_Mesh that you can render
-
-### how things are added into the game:
-#### props
-- you wrote a prop renderer, just go read the code dummy
-#### everything else
-- go read the code, if it's hard to understand, git gudder at programming idk
-- the punishment for writing garbage should be rewritting & refactoring
+#### physics & particles
+- basic collider types eg. 'Cube_Collider'
+- some collision test functions eg. point_in_sphere() or sphere_plane_intersect()
+- dynamic colliders are for things that move around, eg. prop barrel
+- fixed colliders are for geometry that is fixed in place eg. a wall
+- a 'Particle_Emitter' emits particles through an emit() funtion eg. emit_fire()
