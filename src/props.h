@@ -1,7 +1,5 @@
 #include "ocean.h"
 
-// prop renderer
-
 #define MAX_PROPS 8 // max number of props of a given kind
 #define NUM_PROP_TYPES 7
 
