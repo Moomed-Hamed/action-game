@@ -12,7 +12,7 @@ struct Peer
 
 void init(Peer* peer)
 {
-	init_collider(&peer->hitbox, vec3(0, 1, 0), vec3(0, 0, 0), vec3(0, 0, 0), 1, 1, .5);
+	peer->hitbox = { vec3(0, 1, 0), vec3(0, 0, 0), vec3(0, 0, 0), 1, 1, .5 };
 }
 void update(Peer* peer, float dtime)
 {
@@ -31,8 +31,9 @@ struct Peer_Renderer
 {
 	Drawable_Mesh_Anim_UV mesh;
 	Shader shader;
+	GLuint texture, material;
 	Animation animation;
-	mat4 current_pose[MAX_ANIMATED_BONES];
+	mat4 current_pose[MAX_ANIM_BONES];
 };
 
 void init(Peer_Renderer* renderer)
@@ -41,8 +42,8 @@ void init(Peer_Renderer* renderer)
 	mesh_add_attrib_vec3(5, sizeof(Peer_Drawable), 0); // world pos
 	mesh_add_attrib_mat3(6, sizeof(Peer_Drawable), sizeof(vec3)); // rotation
 
-	renderer->mesh.texture_id  = load_texture("assets/textures/palette2.bmp");
-	renderer->mesh.material_id = load_texture("assets/textures/materials.bmp");
+	renderer->texture  = load_texture("assets/textures/palette2.bmp");
+	renderer->material = load_texture("assets/textures/materials.bmp");
 
 	load(&(renderer->shader), "assets/shaders/transform/mesh_anim_uv.vert", "assets/shaders/mesh_uv.frag");
 	load(&renderer->animation, "assets/animations/peer.anim"); // animaiton keyframes
@@ -61,6 +62,7 @@ void draw(Peer_Renderer* renderer, mat4 proj_view)
 {
 	bind(renderer->shader);
 	set_mat4(renderer->shader, "proj_view", proj_view);
-	bind_texture(renderer->mesh);
+	bind_texture(renderer->texture, 0);
+	bind_texture(renderer->material, 1);
 	draw(renderer->mesh);
 }

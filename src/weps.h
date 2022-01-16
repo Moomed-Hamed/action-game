@@ -96,7 +96,8 @@ struct Flintlock_Renderer
 	Drawable_Mesh_Anim_UV mesh;
 	Shader shader;
 	Animation animation;
-	mat4 current_pose[MAX_ANIMATED_BONES];
+	GLuint texture, material;
+	mat4 current_pose[MAX_ANIM_BONES];
 };
 
 void init(Flintlock_Renderer* renderer)
@@ -105,8 +106,8 @@ void init(Flintlock_Renderer* renderer)
 	mesh_add_attrib_vec3(5, sizeof(Prop_Drawable), 0); // world pos
 	mesh_add_attrib_mat3(6, sizeof(Prop_Drawable), sizeof(vec3)); // rotation
 
-	renderer->mesh.texture_id  = load_texture("assets/textures/palette2.bmp");
-	renderer->mesh.material_id = load_texture("assets/textures/materials.bmp");
+	renderer->texture  = load_texture("assets/textures/palette2.bmp");
+	renderer->material = load_texture("assets/textures/materials.bmp");
 	load(&(renderer->shader), "assets/shaders/transform/mesh_anim_uv.vert", "assets/shaders/mesh_uv.frag");
 
 	load(&renderer->animation, "assets/animations/flintlock.anim"); // animaiton keyframes
@@ -141,7 +142,8 @@ void update_renderer(Flintlock_Renderer* renderer, Flintlock gun, float dtime, C
 void draw(Flintlock_Renderer renderer, mat4 proj_view)
 {
 	bind(renderer.shader);
-	bind_texture(renderer.mesh);
+	bind_texture(renderer.texture , 0);
+	bind_texture(renderer.material, 1);
 	set_mat4(renderer.shader, "proj_view", proj_view);
 	draw(renderer.mesh);
 }

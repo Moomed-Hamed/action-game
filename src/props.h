@@ -141,43 +141,6 @@ void draw(Prop_Renderer* renderer, mat4 proj_view)
 	}
 }
 
-// sky &island
-
-struct Tile_Renderer
-{
-	Drawable_Mesh_UV sky_mesh;
-	Shader shader;
-};
-
-void init(Tile_Renderer* renderer)
-{
-	load(&renderer->sky_mesh, "assets/meshes/env/sky.mesh_uv", sizeof(Prop_Drawable));
-	mesh_add_attrib_vec3(3, sizeof(Prop_Drawable), 0); // world pos
-	mesh_add_attrib_mat3(4, sizeof(Prop_Drawable), sizeof(vec3)); // rotation
-
-	renderer->sky_mesh.texture_id  = load_texture("assets/textures/palette2.bmp");
-	renderer->sky_mesh.material_id = load_texture("assets/textures/materials.bmp");
-
-	load(&renderer->shader, "assets/shaders/transform/mesh_uv.vert", "assets/shaders/mesh_uv.frag");
-}
-void update_renderer(Tile_Renderer* renderer)
-{
-	Prop_Drawable tile = {};
-
-	tile.position  = vec3(0, 0, 0);
-	tile.transform = mat3(1.f);
-
-	update(renderer->sky_mesh  , sizeof(Prop_Drawable), (byte*)(&tile));
-}
-void draw(Tile_Renderer* renderer, mat4 proj_view)
-{
-	bind(renderer->shader);
-	set_mat4(renderer->shader, "proj_view", proj_view);
-
-	bind_texture(renderer->sky_mesh);
-	draw(renderer->sky_mesh);
-}
-
 // orb rendering
 
 #define MAX_ORBS 16
@@ -236,6 +199,7 @@ struct Orb_Renderer
 	uint num_orbs;
 	Orb_Drawable orbs[MAX_ORBS];
 	Drawable_Mesh_UV mesh;
+	GLuint texture, material;
 	Shader shader;
 };
 
@@ -245,8 +209,8 @@ void init(Orb_Renderer* renderer)
 	mesh_add_attrib_vec3(3, sizeof(Orb_Drawable), 0); // world pos
 	mesh_add_attrib_mat3(4, sizeof(Orb_Drawable), sizeof(vec3)); // transform
 
-	renderer->mesh.texture_id  = load_texture("assets/textures/palette2.bmp");
-	renderer->mesh.material_id = load_texture("assets/textures/materials.bmp");
+	renderer->texture  = load_texture("assets/textures/palette2.bmp");
+	renderer->material = load_texture("assets/textures/materials.bmp");
 
 	load(&(renderer->shader), "assets/shaders/transform/mesh_uv.vert", "assets/shaders/mesh_uv.frag");
 }
@@ -271,7 +235,8 @@ void draw(Orb_Renderer* renderer, mat4 proj_view)
 {
 	bind(renderer->shader);
 	set_mat4(renderer->shader, "proj_view", proj_view);
-	bind_texture(renderer->mesh);
+	bind_texture(renderer->texture, 0);
+	bind_texture(renderer->material, 1);
 	draw(renderer->mesh, renderer->num_orbs);
 }
 

@@ -56,26 +56,22 @@ int main()
 	Orb_Renderer* orb_renderer = Alloc(Orb_Renderer, 1);
 	init(orb_renderer);
 
-	Tile_Renderer* tile_renderer = Alloc(Tile_Renderer, 1);
-	init(tile_renderer);
-
 	Physics_Colliders* colliders = Alloc(Physics_Colliders, 1);
-	init_colldier(colliders->dynamic.cubes    , vec3(1, .5, 3), vec3(0), vec3(0), 1, vec3(1, 1, 1));
-	init_collider(colliders->dynamic.cylinders, vec3(5, .5, 3), vec3(0), vec3(0), 1, 1, .5);
-	init_collider(colliders->dynamic.spheres  , vec3(3, .5, 3), vec3(0), vec3(0), 1, .5);
-	//init_collider(colliders->fixed.planes   , vec3(5, 6, 6), vec3(0), vec3(0), vec3(0, 0, -1), vec2(10));
-	//init_collider(colliders->fixed.planes + 1, vec3(0, 0, 0), vec3(0), vec3(0), vec3(0, 1,  0), vec2(100));
+	colliders->dynamic.cubes     [0] = { {1, .5, 3}, {}, {}, 1, vec3(1) };
+	colliders->dynamic.cylinders [0] = { {5, .5, 3}, {}, {}, 1, 1, .5 };
+	colliders->dynamic.spheres   [0] = { {3, .5, 3}, {}, {}, 1, .5 };
+	//colliders->fixed.planes[0] = { {5, 6, 6}, {}, {}, {0, 0, -1}, vec2(10)  };
+	//colliders->fixed.planes[1] = { {0, 0, 0}, {}, {}, {0, 1,  0}, vec2(100) };
 
 	Physics_Renderer* physics_renderer = Alloc(Physics_Renderer, 1);
 	init(physics_renderer);
 
-	G_Buffer g_buffer = {};
-	init_g_buffer(&g_buffer, window);
+	G_Buffer g_buffer = make_g_buffer(window);
 	Shader lighting_shader = make_lighting_shader();
 	mat4 proj = glm::perspective(FOV, (float)window.screen_width / window.screen_height, 0.1f, DRAW_DISTANCE);
 
 	// frame timer
-	float frame_time = 1.f / 60;
+	float frame_time = 1.f / 45;
 	int64 target_frame_milliseconds = frame_time * 1000.f; // seconds * 1000 = milliseconds
 	Timestamp frame_start = get_timestamp(), frame_end;
 
@@ -113,11 +109,10 @@ int main()
 		update_renderer(player_renderer   , frame_time, *player, mouse);
 		update_renderer(enemy_renderer    , frame_time, enemies);
 		update_renderer(peer_renderer     , frame_time, *peer);
-		update_renderer(physics_renderer  , colliders);
 		update_renderer(particle_renderer , emitter);
 		update_renderer(bullet_renderer   , bullets);
 		update_renderer(orb_renderer      , orbs);
-		update_renderer(tile_renderer);
+		//update_renderer(tile_renderer);
 		update_renderer(prop_renderer, props);
 
 		static float time = 0; time += frame_time / 4;
@@ -136,7 +131,6 @@ int main()
 		draw(player_renderer   , proj_view);
 		draw(enemy_renderer    , proj_view);
 		draw(particle_renderer , proj_view);
-		draw(tile_renderer     , proj_view);
 		draw(orb_renderer      , proj_view);
 		draw(bullet_renderer   , proj_view);
 		draw(prop_renderer     , proj_view);
@@ -151,7 +145,7 @@ int main()
 
 		bind(lighting_shader);
 		set_vec3(lighting_shader, "view_pos", player->eyes.position);
-		draw_g_buffer(g_buffer);
+		draw(g_buffer);
 
 		//Frame Time
 		frame_end = get_timestamp();

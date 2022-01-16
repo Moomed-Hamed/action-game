@@ -17,8 +17,7 @@ struct Player
 
 void init(Player* player)
 {
-	init_collider(&player->feet, vec3(0, 1, 0), vec3(0, 0, 0), vec3(0, 0, 0), 1, .25);
-
+	player->feet = { vec3(0, 1, 0), vec3(0, 0, 0), vec3(0, 0, 0), 1, .25 };
 	player->flintlock.shoot = load_audio("assets/audio/pistol_shot.audio");
 	player->flintlock.arm   = load_audio("assets/audio/arm.audio");
 }
@@ -44,8 +43,7 @@ void update(Player* player, float dtime, Bullet* bullets, Keyboard keys, Mouse m
 
 	feet->position += dtime * movement_velocity;
 
-	Plane_Collider ground = {};
-	init_collider(&ground, vec3(0, 0, 0), vec3(0, 0, 0), vec3(0, 0, 0), vec3(0, 1, 0), vec2(100, 100));
+	Plane_Collider ground = { vec3(0, 0, 0), vec3(0, 0, 0), vec3(0, 0, 0), vec3(0, 1, 0), vec2(512) };
 
 	vec3 force = vec3(feet->force.x, feet->force.y + GRAVITY, feet->force.z);
 
@@ -76,7 +74,7 @@ void update(Player* player, float dtime, Bullet* bullets, Keyboard keys, Mouse m
 	}
 
 	player->eyes.position   = player->feet.position;
-	player->eyes.position.y = player->feet.position.y + 1.3f + jump_offset;
+	player->eyes.position.y = player->feet.position.y + 1.3f + jump_offset + 10;
 
 	// item selection
 	if (keys.I.is_pressed) player->item_id = ITEM_GUN;
@@ -94,25 +92,25 @@ struct Player_Renderer
 	Flintlock_Renderer flintlock_renderer;
 	Drawable_Mesh_UV sword;
 	Drawable_Mesh_UV potion;
+	GLuint texture, material;
 
 	Shader mesh_uv, mesh_anim;
 };
 
 void init(Player_Renderer* renderer)
 {
-	load(&(renderer->mesh_uv), "assets/shaders/transform/mesh_uv.vert", "assets/shaders/mesh_uv.frag");
+	load(&renderer->mesh_uv, "assets/shaders/transform/mesh_uv.vert", "assets/shaders/mesh_uv.frag");
 
 	load(&renderer->sword, "assets/meshes/sword.mesh_uv", sizeof(Prop_Drawable));
 	mesh_add_attrib_vec3(3, sizeof(Prop_Drawable), 0); // world pos
 	mesh_add_attrib_mat3(4, sizeof(Prop_Drawable), sizeof(vec3)); // transform
-	renderer->sword.texture_id  = load_texture("assets/textures/palette2.bmp");
-	renderer->sword.material_id = load_texture("assets/textures/materials.bmp");
 
 	load(&renderer->potion, "assets/meshes/potion.mesh_uv", sizeof(Prop_Drawable));
 	mesh_add_attrib_vec3(3, sizeof(Prop_Drawable), 0); // world pos
 	mesh_add_attrib_mat3(4, sizeof(Prop_Drawable), sizeof(vec3)); // transform
-	renderer->potion.texture_id  = load_texture("assets/textures/palette2.bmp");
-	renderer->potion.material_id = load_texture("assets/textures/materials.bmp");
+
+	renderer->texture = load_texture("assets/textures/palette2.bmp");
+	renderer->material = load_texture("assets/textures/materials.bmp");
 
 	init(&renderer->flintlock_renderer);
 }
@@ -159,6 +157,9 @@ void update_renderer(Player_Renderer* renderer, float dtime, Player player, Mous
 }
 void draw(Player_Renderer* renderer, mat4 proj_view)
 {
+	bind_texture(renderer->texture, 0);
+	bind_texture(renderer->material, 1);
+
 	switch (renderer->item_id)
 	{
 		case ITEM_GUN: {
@@ -167,14 +168,12 @@ void draw(Player_Renderer* renderer, mat4 proj_view)
 
 		case ITEM_POTION: {
 			bind(renderer->mesh_uv);
-			bind_texture(renderer->potion);
 			set_mat4(renderer->mesh_uv, "proj_view", proj_view);
 			draw(renderer->potion);
 		} break;
 
 		default: {
 			bind(renderer->mesh_uv);
-			bind_texture(renderer->sword);
 			set_mat4(renderer->mesh_uv, "proj_view", proj_view);
 			draw(renderer->sword);
 		} break;

@@ -20,7 +20,7 @@ void init(Enemy* enemies)
 		vec3 position = vec3(random_chance_signed(), 0, random_chance_signed()) * 5.f;
 		position.y = .5;
 
-		init_collider(&enemies[i].collider, position, vec3(0), vec3(0), 1, 1, .5);
+		enemies[i].collider = { position, vec3(0), vec3(0), 1, 1, .5 };
 	}
 }
 void update(Enemy* enemies, float dtime, Orb* orbs, Particle_Emitter* emitter, Camera* cam)
@@ -52,9 +52,10 @@ struct Enemy_Renderer
 {
 	Prop_Drawable enemies[MAX_ENEMIES];
 	Drawable_Mesh_Anim_UV mesh;
+	GLuint texture, material;
 	Shader shader;
 	Animation animation;
-	mat4 current_pose[MAX_ANIMATED_BONES];
+	mat4 current_pose[MAX_ANIM_BONES];
 };
 
 void init(Enemy_Renderer* renderer)
@@ -63,8 +64,8 @@ void init(Enemy_Renderer* renderer)
 	mesh_add_attrib_vec3(5, sizeof(Prop_Drawable), 0); // world pos
 	mesh_add_attrib_mat3(6, sizeof(Prop_Drawable), sizeof(vec3)); // rotation
 
-	renderer->mesh.texture_id  = load_texture("assets/textures/palette2.bmp");
-	renderer->mesh.material_id = load_texture("assets/textures/materials.bmp");
+	renderer->texture  = load_texture("assets/textures/palette2.bmp");
+	renderer->material = load_texture("assets/textures/materials.bmp");
 
 	load(&(renderer->shader), "assets/shaders/transform/mesh_anim_uv.vert", "assets/shaders/mesh_uv.frag");
 	load(&renderer->animation, "assets/animations/skeleton.anim"); // animaiton keyframes
@@ -90,6 +91,7 @@ void draw(Enemy_Renderer* renderer, mat4 proj_view)
 {
 	bind(renderer->shader);
 	set_mat4(renderer->shader, "proj_view", proj_view);
-	bind_texture(renderer->mesh);
+	bind_texture(renderer->texture, 0);
+	bind_texture(renderer->material, 1);
 	draw(renderer->mesh, MAX_ENEMIES);
 }
