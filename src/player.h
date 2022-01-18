@@ -43,7 +43,7 @@ void update(Player* player, float dtime, Bullet* bullets, Keyboard keys, Mouse m
 
 	feet->position += dtime * movement_velocity;
 
-	Plane_Collider ground = { vec3(0, 0, 0), vec3(0, 0, 0), vec3(0, 0, 0), vec3(0, 1, 0), vec2(512) };
+	Plane_Collider ground = { {}, {}, {}, {0,1,0}, vec2(512) };
 
 	vec3 force = vec3(feet->force.x, feet->force.y + GRAVITY, feet->force.z);
 
@@ -74,7 +74,7 @@ void update(Player* player, float dtime, Bullet* bullets, Keyboard keys, Mouse m
 	}
 
 	player->eyes.position   = player->feet.position;
-	player->eyes.position.y = player->feet.position.y + 1.3f + jump_offset + 10;
+	player->eyes.position.y = player->feet.position.y + 1.3f + jump_offset;
 
 	// item selection
 	if (keys.I.is_pressed) player->item_id = ITEM_GUN;

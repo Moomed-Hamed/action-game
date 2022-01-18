@@ -1,8 +1,5 @@
 #include "networking.h"
 
-#define TARGET_FRAMES_PER_SECOND ((float)120)
-#define DRAW_DISTANCE 512.0f
-
 int main()
 {
 	Window   window = {};
@@ -112,7 +109,6 @@ int main()
 		update_renderer(particle_renderer , emitter);
 		update_renderer(bullet_renderer   , bullets);
 		update_renderer(orb_renderer      , orbs);
-		//update_renderer(tile_renderer);
 		update_renderer(prop_renderer, props);
 
 		static float time = 0; time += frame_time / 4;
@@ -136,7 +132,7 @@ int main()
 		draw(prop_renderer     , proj_view);
 		draw(heightmap_renderer, proj_view);
 		draw(physics_renderer, proj_view);
-		//draw(peer_renderer   , proj_view);
+		draw(peer_renderer   , proj_view);
 		draw(gui);
 
 		// Lighting pass
