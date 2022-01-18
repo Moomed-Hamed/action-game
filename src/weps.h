@@ -102,7 +102,7 @@ struct Flintlock_Renderer
 
 void init(Flintlock_Renderer* renderer)
 {
-	load(&renderer->mesh, "assets/meshes/flintlock.mesh_anim", sizeof(Prop_Drawable));
+	load(&renderer->mesh, "assets/meshes/weps/flintlock.mesh_anim", sizeof(Prop_Drawable));
 	mesh_add_attrib_vec3(5, sizeof(Prop_Drawable), 0); // world pos
 	mesh_add_attrib_mat3(6, sizeof(Prop_Drawable), sizeof(vec3)); // rotation
 

@@ -57,8 +57,6 @@ int main()
 	colliders->dynamic.cubes     [0] = { {1, .5, 3}, {}, {}, 1, vec3(1) };
 	colliders->dynamic.cylinders [0] = { {5, .5, 3}, {}, {}, 1, 1, .5 };
 	colliders->dynamic.spheres   [0] = { {3, .5, 3}, {}, {}, 1, .5 };
-	//colliders->fixed.planes[0] = { {5, 6, 6}, {}, {}, {0, 0, -1}, vec2(10)  };
-	//colliders->fixed.planes[1] = { {0, 0, 0}, {}, {}, {0, 1,  0}, vec2(100) };
 
 	Physics_Renderer* physics_renderer = Alloc(Physics_Renderer, 1);
 	init(physics_renderer);

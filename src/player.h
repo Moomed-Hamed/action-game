@@ -90,8 +90,7 @@ struct Player_Renderer
 {
 	uint item_id;
 	Flintlock_Renderer flintlock_renderer;
-	Drawable_Mesh_UV sword;
-	Drawable_Mesh_UV potion;
+	Drawable_Mesh_UV sword, potion;
 	GLuint texture, material;
 
 	Shader mesh_uv, mesh_anim;
@@ -101,7 +100,7 @@ void init(Player_Renderer* renderer)
 {
 	load(&renderer->mesh_uv, "assets/shaders/transform/mesh_uv.vert", "assets/shaders/mesh_uv.frag");
 
-	load(&renderer->sword, "assets/meshes/sword.mesh_uv", sizeof(Prop_Drawable));
+	load(&renderer->sword, "assets/meshes/weps/sword.mesh_uv", sizeof(Prop_Drawable));
 	mesh_add_attrib_vec3(3, sizeof(Prop_Drawable), 0); // world pos
 	mesh_add_attrib_mat3(4, sizeof(Prop_Drawable), sizeof(vec3)); // transform
 
